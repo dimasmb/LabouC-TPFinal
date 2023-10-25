@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <string.h>
 #include "fsl_debug_console.h"
-#include "ff.h"
-#include "diskio.h"
-#include "board.h"
-#include "fsl_dac.h"
+#include "fatfs/ff.h"
+#include "fatfs/diskio.h"
+#include "board/board.h"
+#include "drivers/fsl_dac.h"
 
 #include "fsl_sysmpu.h"
 #include "pin_mux.h"
@@ -197,6 +197,15 @@ int main(void)
   }
 #endif
   
+#if _USE_MKFS
+    PRINTF("\r\nMake file system......The time may be long if the card capacity is big.\r\n");
+    if (f_mkfs(driverNumberBuffer, FM_ANY, 0U, work, sizeof work))
+    {
+        PRINTF("Make file system failed.\r\n");
+        return;
+    }
+#endif /* FF_USE_MKFS */
+
   PRINTF("\r\nList the file in that directory......\r\n");
   if (f_opendir(&directory, "/"))
   {
@@ -222,6 +231,7 @@ int main(void)
       strcpy( mp3_files[mp3_file_index], files.fname );    //to save file names
       mp3_file_index++;
       mp3_total_files++;
+      PRINTF("%s\r\n", files.fname);
       
     }
   }

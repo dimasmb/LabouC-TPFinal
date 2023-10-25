@@ -1,7 +1,7 @@
 
 #include <stdlib.h>
 #include "oled.h"  
-#include "glcd.h"
+#include "glcd-master/glcd.h"
 #include <stdint.h>
 #include <fsl_i2c.h>
 #include "fsl_dmamux.h"

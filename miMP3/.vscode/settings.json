@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "fsl_sd_disk.h": "c",
+        "fsl_sysmpu.h": "c"
+    }
+}
