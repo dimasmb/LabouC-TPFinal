@@ -59,7 +59,7 @@
 * @brief wait card insert function.
 */
 static status_t sdcardWaitCardInsert(void);
-void play_file(char *mp3_fname);
+static void play_file(char *mp3_fname);
 
 
 
@@ -71,22 +71,22 @@ static FIL g_fileObject;   /* File object */
 
 //FOr mp3 decoder
 #define FILE_READ_BUFFER_SIZE   (1024*16)
-MP3FrameInfo                 mp3FrameInfo;
-HMP3Decoder         hMP3Decoder;
-uint8_t read_buff[FILE_READ_BUFFER_SIZE];
-uint32_t bytes_read;
-int    bytes_left;
-char    *read_ptr;
-int16_t pcm_buff[2304];
-int16_t audio_buff[2304*2];
-volatile uint32_t delay1 = 1000;
-volatile uint32_t core_clock ;
+static MP3FrameInfo                 mp3FrameInfo;
+static HMP3Decoder         hMP3Decoder;
+static uint8_t read_buff[FILE_READ_BUFFER_SIZE];
+static uint32_t bytes_read;
+static int    bytes_left;
+static char    *read_ptr;
+static int16_t pcm_buff[2304];
+static int16_t audio_buff[2304*2];
+static volatile uint32_t delay1 = 1000;
+static volatile uint32_t core_clock ;
 
-uint8_t mp3_files[1000][15];    //to save file names
-int mp3_file_index;
-int mp3_total_files;
+static uint8_t mp3_files[1000][15];    //to save file names
+static int mp3_file_index;
+static int mp3_total_files;
 
-volatile uint8_t next, prev, replay, mute,ffd,reset, play, volume = 5;
+static uint8_t next, prev, replay, mute,ffd,reset, play, volume = 5;
 
 /* @brief decription about the read/write buffer
 * The size of the read/write buffer should be a multiple of 512, since SDHC/SDXC card uses 512-byte fixed
@@ -230,7 +230,7 @@ static status_t sdcardWaitCardInsert(void)
     return kStatus_Success;
 }
 
-void play_file(char *mp3_fname) {
+static void play_file(char *mp3_fname) {
 
   if(strlen(mp3_fname) == 0) 
     while(1);
