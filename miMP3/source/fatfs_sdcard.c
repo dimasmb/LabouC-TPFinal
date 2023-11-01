@@ -335,7 +335,7 @@ void play_file(char *mp3_fname) {
         	       tmp =   samples[i] + samples[i+1];
         	       tmp /= 2;
         	       //samples[i] = (int16_t)tmp * (int32_t)volume / 10;
-        	       aux_1 = (int16_t)tmp * (int32_t)volume / 10 * 4095 / 32767;
+        	       aux_1 = (int16_t)tmp * (int32_t)volume / 10 * 4095 / 32767; //se escala para trabajar con dac 12 bit , por default se trabaja con 16bit
         	       samples[i] = (int16_t)aux_1;
         	       /*if(samples[i]>aux){
         	    	   aux = samples[i];
