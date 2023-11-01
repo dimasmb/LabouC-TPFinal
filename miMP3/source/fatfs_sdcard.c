@@ -60,8 +60,7 @@
 */
 static status_t sdcardWaitCardInsert(void);
 void play_file(char *mp3_fname);
-static uint32_t Mp3ReadId3V2Tag(FIL* pInFile, char* pszArtist, uint32_t unArtistSize, char* pszTitle, uint32_t unTitleSize);
-static uint32_t Mp3ReadId3V2Text(FIL* pInFile, uint32_t unDataLen, char* pszBuffer, uint32_t unBufferSize);
+
 
 
 /*******************************************************************************
@@ -86,6 +85,8 @@ volatile uint32_t core_clock ;
 uint8_t mp3_files[1000][15];    //to save file names
 int mp3_file_index;
 int mp3_total_files;
+
+volatile uint8_t next, prev, replay, mute,ffd,reset, play, volume = 5;
 
 /* @brief decription about the read/write buffer
 * The size of the read/write buffer should be a multiple of 512, since SDHC/SDXC card uses 512-byte fixed
@@ -192,10 +193,7 @@ int main(void)
   }
     /****************************/
     mp3_file_index = 0;
-    //while (true)
-    {
-        play_file(mp3_files[mp3_file_index]);
-    }
+    play_file(mp3_files[mp3_file_index]);
 }
 
 static status_t sdcardWaitCardInsert(void)
@@ -240,6 +238,8 @@ void play_file(char *mp3_fname) {
 
   FIL fil;        /* File object */
   FRESULT fr;     /* FatFs return code */
+  uint32_t time = 0;
+  uint32_t seconds = 0, prev_seconds = 0, minutes = 0;
   
   /* Open a text file */
   fr = f_open(&fil, mp3_fname, FA_READ);
@@ -254,185 +254,134 @@ void play_file(char *mp3_fname) {
   hMP3Decoder = MP3InitDecoder();
   
   
-  char szArtist[120];
-  char szTitle[120];
-  Mp3ReadId3V2Tag(&fil, szArtist, sizeof(szArtist), szTitle, sizeof(szTitle));
-  
-  
- // uint32_t size = f_size(&fil);
-  //uint32_t read_size = 0;
-  
   bytes_left = 0;
-//  read_ptr = read_buff;
 
-  }
 
-/*
-* Taken from
-* http://www.mikrocontroller.net/topic/252319
-*/
 
-static uint32_t Mp3ReadId3V2Text(FIL* pInFile, uint32_t unDataLen, char* pszBuffer, uint32_t unBufferSize)
-{
-  UINT unRead = 0;
-  BYTE byEncoding = 0;
-  if((f_read(pInFile, &byEncoding, 1, &unRead) == FR_OK) && (unRead == 1))
-  {
-    unDataLen--;
-    if(unDataLen <= (unBufferSize - 1))
-    {
-      if((f_read(pInFile, pszBuffer, unDataLen, &unRead) == FR_OK) ||
-         (unRead == unDataLen))
-      {
-        if(byEncoding == 0)
-        {
-          // ISO-8859-1 multibyte
-          // just add a terminating zero
-          pszBuffer[unDataLen] = 0;
-        }
-        else if(byEncoding == 1)
-        {
-          // UTF16LE unicode
-          uint32_t r = 0;
-          uint32_t w = 0;
-          if((unDataLen > 2) && (pszBuffer[0] == 0xFF) && (pszBuffer[1] == 0xFE))
-          {
-            // ignore BOM, assume LE
-            r = 2;
-          }
-          for(; r < unDataLen; r += 2, w += 1)
-          {
-            // should be acceptable for 7 bit ascii
-            pszBuffer[w] = pszBuffer[r];
-          }
-          pszBuffer[w] = 0;
+   int offset, err;
+   int outOfData = 0;
+
+   unsigned int br, btr;
+
+   int16_t *samples = pcm_buff;
+   while(1) {
+      if( bytes_left < FILE_READ_BUFFER_SIZE/2 ) {      //Se crea un ping pong buffer
+        memcpy( read_buff, read_ptr, bytes_left );
+        read_ptr = read_buff;
+        btr = FILE_READ_BUFFER_SIZE - bytes_left;
+
+
+        //GPIO_TogglePinsOutput(BOARD_LED_BLUE_GPIO, 1U << BOARD_LED_BLUE_GPIO_PIN);
+        GPIO_WritePinOutput(GPIOB, BOARD_LED_BLUE_GPIO_PIN, 0);
+        fr = f_read(&fil, read_buff + bytes_left, btr, &br);
+        GPIO_WritePinOutput(GPIOB, BOARD_LED_BLUE_GPIO_PIN, 1);
+
+        bytes_left = FILE_READ_BUFFER_SIZE;
+
+        if(fr || br < btr) {
+          f_close(&fil);
+          return;//while(1);//change
         }
       }
-      else
-      {
-        return 1;
-      }
-    }
-    else
-    {
-      // we won't read a partial text
-      if(f_lseek(pInFile, f_tell(pInFile) + unDataLen) != FR_OK)
-      {
-        return 1;
-      }
-    }
-  }
-  else
-  {
-    return 1;
-  }
-  return 0;
-}
 
-/*
-* Taken from
-* http://www.mikrocontroller.net/topic/252319
-*/
-static uint32_t Mp3ReadId3V2Tag(FIL* pInFile, char* pszArtist, uint32_t unArtistSize, char* pszTitle, uint32_t unTitleSize)
-{
-  pszArtist[0] = 0;
-  pszTitle[0] = 0;
-  
-  BYTE id3hd[10];
-  UINT unRead = 0;
-  if((f_read(pInFile, id3hd, 10, &unRead) != FR_OK) || (unRead != 10))
-  {
-    return 1;
-  }
-  else
-  {
-    uint32_t unSkip = 0;
-    if((unRead == 10) &&
-       (id3hd[0] == 'I') &&
-         (id3hd[1] == 'D') &&
-           (id3hd[2] == '3'))
-    {
-      unSkip += 10;
-      unSkip = ((id3hd[6] & 0x7f) << 21) | ((id3hd[7] & 0x7f) << 14) | ((id3hd[8] & 0x7f) << 7) | (id3hd[9] & 0x7f);
-      
-      // try to get some information from the tag
-      // skip the extended header, if present
-      uint8_t unVersion = id3hd[3];
-      if(id3hd[5] & 0x40)
-      {
-        BYTE exhd[4];
-        f_read(pInFile, exhd, 4, &unRead);
-        size_t unExHdrSkip = ((exhd[0] & 0x7f) << 21) | ((exhd[1] & 0x7f) << 14) | ((exhd[2] & 0x7f) << 7) | (exhd[3] & 0x7f);
-        unExHdrSkip -= 4;
-        if(f_lseek(pInFile, f_tell(pInFile) + unExHdrSkip) != FR_OK)
-        {
-          return 1;
-        }
+
+     //en read_ptr tenemos la informacion . xq es donde le mando pa buscar
+      offset = MP3FindSyncWord((unsigned char*)read_ptr, bytes_left); //va q va
+      if(offset == -1 ) {
+        bytes_left = 0;
+        continue;
+
       }
-      uint32_t nFramesToRead = 2;
-      while(nFramesToRead > 0)
-      {
-        char frhd[10];
-        if((f_read(pInFile, frhd, 10, &unRead) != FR_OK) || (unRead != 10))
-        {
-          return 1;
-        }
-        if((frhd[0] == 0) || (strncmp(frhd, "3DI", 3) == 0))
-        {
+
+      bytes_left -= offset;
+      read_ptr += offset;
+
+      err = MP3Decode(hMP3Decoder, (unsigned char**)&read_ptr, (int*)&bytes_left, samples, 0);
+
+      if (err) {
+        /* error occurred */
+        switch (err) {
+        case ERR_MP3_INDATA_UNDERFLOW:
+          outOfData = 1;
+          break;
+        case ERR_MP3_MAINDATA_UNDERFLOW:
+          /* do nothing - next call to decode will provide more mainData */
+          break;
+
+
+        case ERR_MP3_NULL_POINTER:
+          bytes_left -=1;
+          read_ptr+=1;
+        case ERR_MP3_FREE_BITRATE_SYNC:
+        default:
+          outOfData = 1;
           break;
         }
-        char szFrameId[5] = {0, 0, 0, 0, 0};
-        memcpy(szFrameId, frhd, 4);
-        uint32_t unFrameSize = 0;
-        uint32_t i = 0;
-        for(; i < 4; i++)
-        {
-          if(unVersion == 3)
-          {
-            // ID3v2.3
-            unFrameSize <<= 8;
-            unFrameSize += frhd[i + 4];
+      } else {
+        // no error
+        MP3GetLastFrameInfo(hMP3Decoder, &mp3FrameInfo);
+        // Duplicate data in case of mono to maintain playback speed
+        if (mp3FrameInfo.nChans == 2) {
+          /*for(int i = mp3FrameInfo.outputSamps;i >= 0;i--) {
+            samples[2 * i]=samples[i];
+            samples[2 * i + 1]=samples[i];
           }
-          if(unVersion == 4)
-          {
-            // ID3v2.4
-            unFrameSize <<= 7;
-            unFrameSize += frhd[i + 4] & 0x7F;
-          }
-        }
-        
-        if(strcmp(szFrameId, "TPE1") == 0)
-        {
-          // artist
-          if(Mp3ReadId3V2Text(pInFile, unFrameSize, pszArtist, unArtistSize) != 0)
-          {
-            break;
-          }
-          nFramesToRead--;
-        }
-        else if(strcmp(szFrameId, "TIT2") == 0)
-        {
-          // title
-          if(Mp3ReadId3V2Text(pInFile, unFrameSize, pszTitle, unTitleSize) != 0)
-          {
-            break;
-          }
-          nFramesToRead--;
-        }
-        else
-        {
-          if(f_lseek(pInFile, f_tell(pInFile) + unFrameSize) != FR_OK)
-          {
-            return 1;
-          }
+          mp3FrameInfo.outputSamps *= 2;*/
+        	int32_t tmp = 0;
+        	//static int32_t aux =0;
+        	static float aux_1 = 0;
+        	for(int i = 0; i < mp3FrameInfo.outputSamps; i++) {
+        	     if(i%2 == 0) {
+        	       tmp =   samples[i] + samples[i+1];
+        	       tmp /= 2;
+        	       //samples[i] = (int16_t)tmp * (int32_t)volume / 10;
+        	       aux_1 = (int16_t)tmp * (int32_t)volume / 10 * 4095 / 32767;
+        	       samples[i] = (int16_t)aux_1;
+        	       /*if(samples[i]>aux){
+        	    	   aux = samples[i];
+        	       }*/
+        	     }
+		   }
         }
       }
-    }
-    if(f_lseek(pInFile, unSkip) != FR_OK)
-    {
-      return 1;
+      if (!outOfData) {
+        //ProvideAudioBuffer(samples, mp3FrameInfo.outputSamps);
+    	  /*
+    	   * filter FIR
+    	   * do{
+    	   * algo=fill_buffer()
+    	   * }while(algo = 0)
+    	   *
+    	   */
+
+        time += mp3FrameInfo.outputSamps/2;
+        if(time > mp3FrameInfo.samprate) {
+          time -= mp3FrameInfo.samprate;
+          seconds++;
+          if(seconds >= 60) {
+            minutes++;
+            seconds = 0;
+          }
+        }
+
+        /*if (g_ButtonPress || next || prev || replay)
+        {
+          if(next) {
+            next = 0;
+            play = eNEXT;
+          } else if( prev ) {
+            prev = 0;
+            play = ePREVIOUS;
+          } else if ( replay ){
+            play = eREPLAY;
+            replay = 0;
+          }
+          //GPIO_TogglePinsOutput(BOARD_LED_GPIO, 1U << BOARD_LED_GPIO_PIN);
+          g_ButtonPress = false;
+          memset(audio_buff, 0, sizeof(audio_buff));
+          f_close(&fil);
+          return;
+        }*/
+      }
     }
   }
-  
-  return 0;
-}
