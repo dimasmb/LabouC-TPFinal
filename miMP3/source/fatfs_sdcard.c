@@ -40,6 +40,9 @@
 #include "diskio.h"
 #include "fsl_sd_disk.h"
 #include "board.h"
+//funciones joaco
+#include "dac_out.h"
+
 
 #include "mp3dec.h"
 
@@ -59,7 +62,7 @@
 * @brief wait card insert function.
 */
 static status_t sdcardWaitCardInsert(void);
-static void play_file(char *mp3_fname);
+void play_file(char *mp3_fname);
 
 
 
@@ -71,22 +74,22 @@ static FIL g_fileObject;   /* File object */
 
 //FOr mp3 decoder
 #define FILE_READ_BUFFER_SIZE   (1024*16)
-static MP3FrameInfo                 mp3FrameInfo;
-static HMP3Decoder         hMP3Decoder;
-static uint8_t read_buff[FILE_READ_BUFFER_SIZE];
-static uint32_t bytes_read;
-static int    bytes_left;
-static char    *read_ptr;
-static int16_t pcm_buff[2304];
-static int16_t audio_buff[2304*2];
-static volatile uint32_t delay1 = 1000;
-static volatile uint32_t core_clock ;
+MP3FrameInfo                 mp3FrameInfo;
+HMP3Decoder         hMP3Decoder;
+uint8_t read_buff[FILE_READ_BUFFER_SIZE];
+uint32_t bytes_read;
+int    bytes_left;
+char    *read_ptr;
+int16_t pcm_buff[2304];
+int16_t audio_buff[2304*2];
+volatile uint32_t delay1 = 1000;
+volatile uint32_t core_clock ;
 
-static uint8_t mp3_files[1000][15];    //to save file names
-static int mp3_file_index;
-static int mp3_total_files;
+uint8_t mp3_files[1000][15];    //to save file names
+int mp3_file_index;
+int mp3_total_files;
 
-static uint8_t next, prev, replay, mute,ffd,reset, play, volume = 5;
+volatile uint8_t next, prev, replay, mute,ffd,reset, play, volume = 5;
 
 /* @brief decription about the read/write buffer
 * The size of the read/write buffer should be a multiple of 512, since SDHC/SDXC card uses 512-byte fixed
@@ -139,6 +142,7 @@ int main(void)
     BOARD_BootClockRUN();
     BOARD_InitDebugConsole();
     SYSMPU_Enable(SYSMPU, false);
+    dac_out_init();
 
     PRINTF("\r\nFATFS example to demonstrate how to use FATFS with SD card.\r\n");
 
@@ -230,7 +234,7 @@ static status_t sdcardWaitCardInsert(void)
     return kStatus_Success;
 }
 
-static void play_file(char *mp3_fname) {
+void play_file(char *mp3_fname) {
 
   if(strlen(mp3_fname) == 0) 
     while(1);
@@ -335,8 +339,8 @@ static void play_file(char *mp3_fname) {
         	       tmp =   samples[i] + samples[i+1];
         	       tmp /= 2;
         	       //samples[i] = (int16_t)tmp * (int32_t)volume / 10;
-        	       aux_1 = (int16_t)tmp * (int32_t)volume / 10 * 4095 / 32767; //se escala para trabajar con dac 12 bit , por default se trabaja con 16bit
-        	       samples[i] = (int16_t)aux_1;
+        	       aux_1 = (int16_t)tmp * (int32_t)volume / 100 ;//* (4095 / 32767); //se escala para trabajar con dac 12 bit , por default se trabaja con 16bit
+        	       samples[i] = (int16_t)aux_1+2000;
         	       /*if(samples[i]>aux){
         	    	   aux = samples[i];
         	       }*/
@@ -345,6 +349,7 @@ static void play_file(char *mp3_fname) {
         }
       }
       if (!outOfData) {
+    	  int status_buf=0;
         //ProvideAudioBuffer(samples, mp3FrameInfo.outputSamps);
     	  /*
     	   * filter FIR
@@ -353,16 +358,19 @@ static void play_file(char *mp3_fname) {
     	   * }while(algo = 0)
     	   *
     	   */
+    	  do{
+    		  status_buf=fill_buffer(samples);
+    	  }while(status_buf==0);
 
-        time += mp3FrameInfo.outputSamps/2;
-        if(time > mp3FrameInfo.samprate) {
+        //time += mp3FrameInfo.outputSamps/2;
+        /*if(time > mp3FrameInfo.samprate) {
           time -= mp3FrameInfo.samprate;
           seconds++;
           if(seconds >= 60) {
             minutes++;
             seconds = 0;
           }
-        }
+        }*/
 
         /*if (g_ButtonPress || next || prev || replay)
         {
