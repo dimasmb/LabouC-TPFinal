@@ -115,7 +115,7 @@
 								<option id="gnu.c.compiler.option.misc.verbose.1393876578" name="Verbose (-v)" superClass="gnu.c.compiler.option.misc.verbose" useByScannerDiscovery="false"/>
 								<option id="gnu.c.compiler.option.misc.ansi.1578346107" name="Support ANSI programs (-ansi)" superClass="gnu.c.compiler.option.misc.ansi" useByScannerDiscovery="false"/>
 								<option id="gnu.c.compiler.option.misc.pic.1809260009" name="Position Independent Code (-fPIC)" superClass="gnu.c.compiler.option.misc.pic" useByScannerDiscovery="false"/>
-								<option id="com.crt.advproject.gcc.lto.1558030685" name="Enable Link-time optimization (-flto)" superClass="com.crt.advproject.gcc.lto" useByScannerDiscovery="false"/>
+								<option id="com.crt.advproject.gcc.lto.1558030685" name="Enable Link-time optimization (-flto)" superClass="com.crt.advproject.gcc.lto" useByScannerDiscovery="false" value="false" valueType="boolean"/>
 								<option id="com.crt.advproject.gcc.lto.fat.596010293" name="Fat lto objects (-ffat-lto-objects)" superClass="com.crt.advproject.gcc.lto.fat" useByScannerDiscovery="false"/>
 								<option id="com.crt.advproject.gcc.fpu.2092290214" name="Floating point" superClass="com.crt.advproject.gcc.fpu" useByScannerDiscovery="false" value="com.crt.advproject.gcc.fpu.fpv4.hard" valueType="enumerated"/>
 								<option id="com.crt.advproject.gcc.thumbinterwork.1683208227" name="Enable Thumb interworking" superClass="com.crt.advproject.gcc.thumbinterwork" useByScannerDiscovery="false"/>
@@ -259,6 +259,22 @@
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
 								</inputType>
 							</tool>
+						</toolChain>
+					</folderInfo>
+					<folderInfo id="com.crt.advproject.config.exe.debug.1313927357.34379787" name="/" resourcePath="helix">
+						<toolChain id="com.crt.advproject.toolchain.exe.debug.302144740" name="NXP MCU Tools" superClass="com.crt.advproject.toolchain.exe.debug" unusedChildren="">
+							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF;org.eclipse.cdt.core.GNU_ELF" id="com.crt.advproject.platform.exe.debug" name="ARM-based MCU (Debug)" superClass="com.crt.advproject.platform.exe.debug"/>
+							<tool id="com.crt.advproject.cpp.exe.debug.1078076331" name="MCU C++ Compiler" superClass="com.crt.advproject.cpp.exe.debug.1836330686"/>
+							<tool id="com.crt.advproject.gcc.exe.debug.393605396" name="MCU C Compiler" superClass="com.crt.advproject.gcc.exe.debug.1703754753">
+								<option id="com.crt.advproject.gcc.exe.debug.option.optimization.level.1885512583" name="Optimization Level" superClass="com.crt.advproject.gcc.exe.debug.option.optimization.level" useByScannerDiscovery="false" value="gnu.c.optimization.level.most" valueType="enumerated"/>
+								<inputType id="com.crt.advproject.compiler.input.1341838735" superClass="com.crt.advproject.compiler.input"/>
+							</tool>
+							<tool id="com.crt.advproject.gas.exe.debug.1989839403" name="MCU Assembler" superClass="com.crt.advproject.gas.exe.debug.1207344714">
+								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.893819183" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
+								<inputType id="com.crt.advproject.assembler.input.322053646" name="Additional Assembly Source Files" superClass="com.crt.advproject.assembler.input"/>
+							</tool>
+							<tool id="com.crt.advproject.link.cpp.exe.debug.751400168" name="MCU C++ Linker" superClass="com.crt.advproject.link.cpp.exe.debug.1240913714"/>
+							<tool id="com.crt.advproject.link.exe.debug.482289887" name="MCU Linker" superClass="com.crt.advproject.link.exe.debug.880388283"/>
 						</toolChain>
 					</folderInfo>
 					<folderInfo id="com.crt.advproject.config.exe.debug.1313927357.1762711839" name="/" resourcePath="source">

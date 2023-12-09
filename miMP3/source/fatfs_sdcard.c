@@ -82,7 +82,7 @@ uint32_t bytes_read;
 int    bytes_left;
 char    *read_ptr;
 int16_t pcm_buff[2304];
-int16_t audio_buff[2304] = {0};
+int16_t audio_buff[2304*4] = {0};
 volatile uint32_t delay1 = 1000;
 volatile uint32_t core_clock ;
 
@@ -169,6 +169,7 @@ int main(void)
     }
 #endif
 
+
     PRINTF("\r\nList the file in that directory......\r\n");
     if (f_opendir(&directory, "/Musica"))
     {
@@ -180,11 +181,6 @@ int main(void)
     volatile FILINFO files;
     FRESULT res;
   
-    //char mp3_fname[50];
-    //memset(mp3_fname, 0, 50);
-
-
-
     while(1) {
     res =  f_readdir(&directory, &files);
     if( res != FR_OK || strlen(files.fname) == 0) {
@@ -272,7 +268,7 @@ void play_file(char *mp3_fname) {
 
    while(1) {
 	  gpioWrite(PORTNUM2PIN(PC,16), HIGH);
-	  for(int t=0; t<2;t++){
+	  for(int t=0; t<2*4;t++){
 		  if( bytes_left < FILE_READ_BUFFER_SIZE/2 ) {      //Se crea un ping pong buffer
 		          memcpy( read_buff, read_ptr, bytes_left );
 		          read_ptr = read_buff;
@@ -330,7 +326,6 @@ void play_file(char *mp3_fname) {
     	  int status_buf=0;
     	  do{
     		  status_buf=fill_buffer(audio_buff);
-    		  int auxx = audio_buff[1258]+audio_buff[1260]+audio_buff[1264];
     	  }while(status_buf==0);
 
 
