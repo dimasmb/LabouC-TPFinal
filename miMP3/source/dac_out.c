@@ -1,7 +1,7 @@
 #include "dac_out.h"
 #include "filter.h"
 #include "pit.h"
-//#include "gpio.h"
+
 #include "../drivers/fsl_edma.h"
 #include "../drivers/fsl_dmamux.h"
 #include "../drivers/fsl_common.h"
@@ -37,10 +37,7 @@ static int ongoing_transfer = 0;
 
 AT_QUICKACCESS_SECTION_DATA_ALIGN(edma_tcd_t tcdMemoryPoolPtr[TCD_QUEUE_SIZE + 1], sizeof(edma_tcd_t));
 
-
 edma_handle_t g_EDMA_Handle;
-
-
 
 ping_pong_buffer_t music_buffer = {
 		.buffer1 = {0},
@@ -52,7 +49,6 @@ ping_pong_buffer_t music_buffer = {
 		.load_counter = 0,
 };
 
-
 /*******************************************************************************
  * Code
  ******************************************************************************/
@@ -60,39 +56,26 @@ ping_pong_buffer_t music_buffer = {
 /* User callback function for EDMA transfer. */
 void EDMA_Callback(edma_handle_t *handle, void *param, bool transferDone, uint32_t tcds)
 {
-
-    if (transferDone)
-    {
-    	//Seteamos los flags acorde a la ueva situación
-    	music_buffer.next_buffer_ready = 1;
-    	music_buffer.wait = 0;
-    	dac_out_unpause();
-
-        ongoing_transfer = 0;
-        DMAMUX_EnablePeriodTrigger(my_DMAMUX, PINGPONG_CH);
-    	//gpioWrite(PORTNUM2PIN(PC,16), LOW);
-
-    }
+	ongoing_transfer = false;
+	dac_out_unpause();
+	music_buffer.next_buffer_ready = true;
+	return;
 }
 
-/* User callback function for EDMA transfer. */
+
 void EDMA_CallbackPingPong(edma_handle_t *handle, void *param, bool transferDone, uint32_t tcds)
 {
-	if (music_buffer.next_buffer_ready == 0){
-		DMAMUX_DisablePeriodTrigger(my_DMAMUX, PINGPONG_CH);
-	}
-	else{
-		music_buffer.next_buffer_ready = 0;
-	}
 	switch_buffers(&music_buffer);
-    return; //Placeholder. Deberia chequear que puedo levantar el proximo arreglo.
-
+	if (music_buffer.next_buffer_ready == true) music_buffer.next_buffer_ready = false;
+	else dac_out_pause();
+    return;
 }
 
 void init_dma2(){
 
     static edma_transfer_config_t transferConfig;
     static edma_config_t userConfig;
+
 	DMAMUX_Init(my_DMAMUX);
     DMAMUX_SetSource(my_DMAMUX, PINGPONG_CH, 62);
     DMAMUX_EnableChannel(my_DMAMUX, PINGPONG_CH);
@@ -103,13 +86,13 @@ void init_dma2(){
     EDMA_SetCallback(&g_EDMA_Handle, EDMA_CallbackPingPong, NULL);
     EDMA_ResetChannel(g_EDMA_Handle.base, g_EDMA_Handle.channel);
 
-    /* prepare descroptor 0 */
+    /* prepare descriptor 0 */
     EDMA_PrepareTransfer(&transferConfig, music_buffer.current_buffer, sizeof(uint16_t), &(DAC0->DAT[0]), sizeof(uint16_t),
                          sizeof(uint16_t),
                          sizeof(uint16_t) * BUFLEN,
                          kEDMA_MemoryToPeripheral);
     EDMA_TcdSetTransferConfig(tcdMemoryPoolPtr, &transferConfig, &tcdMemoryPoolPtr[1]);
-    EDMA_TcdEnableInterrupts(&tcdMemoryPoolPtr[1], kEDMA_MajorInterruptEnable);
+    EDMA_TcdEnableInterrupts(tcdMemoryPoolPtr, kEDMA_MajorInterruptEnable);
 
     /* prepare descriptor 1 */
     EDMA_PrepareTransfer(&transferConfig, music_buffer.next_buffer, sizeof(uint16_t), &(DAC0->DAT[0]), sizeof(uint16_t),
@@ -117,8 +100,8 @@ void init_dma2(){
                          sizeof(uint16_t) * BUFLEN,
                          kEDMA_MemoryToPeripheral);
     EDMA_TcdSetTransferConfig(&tcdMemoryPoolPtr[1], &transferConfig, &tcdMemoryPoolPtr[0]);
+    EDMA_TcdEnableInterrupts(&tcdMemoryPoolPtr[1], kEDMA_MajorInterruptEnable);
 
-    EDMA_TcdEnableInterrupts(&tcdMemoryPoolPtr[0], kEDMA_MajorInterruptEnable);
     intallTCD(my_DMA, PINGPONG_CH, tcdMemoryPoolPtr);
     EDMA_StartTransfer(&g_EDMA_Handle);
     DMAMUX_EnablePeriodTrigger(my_DMAMUX, PINGPONG_CH);
@@ -127,23 +110,16 @@ void init_dma2(){
 
 void dac_out_init(){
     hw_DisableInterrupts();
-
 	init_dac();
-	//gpioMode(PORTNUM2PIN(PC,16), OUTPUT);
 	init_pit();
 	dac_out_pause();
 	init_dma();
 	init_dma2();
-
 	hw_EnableInterrupts();
-
 }
 
 void init_pit() {
-	//SysTick_Init (&set_dac_value);
-	float freq = (float) 48000;
-	int ldval = (int) 100000000/(freq*2);
-	PIT_init(ldval); // 1134*20ns = 1/44100 más o menos
+	PIT_init(1302);
 }
 
 void init_dma(){
@@ -163,18 +139,14 @@ int fill_buffer(uint16_t*original_buf) {
 
 
 	if(music_buffer.next_buffer_ready || ongoing_transfer) return 0; //abortamos, el prox buffer ya está listo
-
-	//gpioWrite(PORTNUM2PIN(PC,16), HIGH);
+	ongoing_transfer = true;
 
 	static edma_transfer_config_t transferConfig;
-
-
-
 	EDMA_PrepareTransfer(&transferConfig, original_buf, sizeof(original_buf[0]), music_buffer.next_buffer,
 						sizeof(music_buffer.next_buffer[0]), sizeof(original_buf[0]), sizeof(music_buffer.buffer1[0])*BUFLEN, kEDMA_MemoryToMemory);
 	EDMA_SubmitTransfer(&fillbuf_EDMA_Handle, &transferConfig);
 	EDMA_StartTransfer(&fillbuf_EDMA_Handle);
-	ongoing_transfer = 1;
+
 	return 1; //se copió el buffer de manera exitosa
 	}
 
@@ -209,7 +181,7 @@ static void intallTCD(DMA_Type *base, uint32_t channel, edma_tcd_t *tcd)
 
 void dac_out_pause(){
 	pit_disable_trig();
-	DAC_SetData(0);
+	DAC_SetData(2047);
 	return;
 }
 
