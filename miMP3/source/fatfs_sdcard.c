@@ -312,7 +312,7 @@ void play_file(char *mp3_fname) {
 		          	int32_t tmp = 0;
 		          	static float aux_1 = 0;
 		          	for(int i = 0; i < mp3FrameInfo.outputSamps; i+=2) {
-		          		uint16_t aux = (uint16_t)(((samples[i]+samples[i+1])>>6)+2047);
+		          		uint16_t aux = (uint16_t)(((samples[i]+samples[i+1])>>5)+2047);
 		          			int index = t*1152+i/2;
 		            	    audio_buff[index] = aux;
 		  		   }
