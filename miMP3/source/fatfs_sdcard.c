@@ -81,7 +81,7 @@ void init_sw(){
  */
 char init_sd_card(DIR*);
 static status_t sdcardWaitCardInsert(void);
-void play_file(char *mp3_fname, char first_call);
+int play_file(char *mp3_fname, char first_call);
 
 /*******************************************************************************
  * Variables
@@ -182,9 +182,13 @@ int main(void) {
 
     init_sw();
 
+
     while(1){
     	if(!g_ButtonPress){
-    		play_file(mp3_files[mp3_file_index], false);
+    		int end_of_song = play_file(mp3_files[mp3_file_index], false);
+    		if (end_of_song){
+    			break;
+    		}
     	}
     }
 }
@@ -257,7 +261,7 @@ static status_t sdcardWaitCardInsert(void) {
     return kStatus_Success;
 }
 
-void play_file(char *mp3_fname, char first_call) {
+int play_file(char *mp3_fname, char first_call) {
 
 	static FIL fil;    /* File object */
 	static FRESULT fr; /* FatFs return code */
@@ -356,5 +360,6 @@ void play_file(char *mp3_fname, char first_call) {
 			status_buf = fill_dma_buffer(audio_buff);
 		} while (status_buf == 0);
 	}
+	return outOfData;
 
 }
