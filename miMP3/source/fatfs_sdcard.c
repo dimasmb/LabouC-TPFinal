@@ -79,6 +79,7 @@ void init_sw(){
 /*!
  * @brief wait card insert function.
  */
+char init_sd_card(DIR*);
 static status_t sdcardWaitCardInsert(void);
 void play_file(char *mp3_fname, char first_call);
 
@@ -88,7 +89,7 @@ void play_file(char *mp3_fname, char first_call);
 static FATFS g_fileSystem; /* File system object */
 static FIL g_fileObject;   /* File object */
 
-// FOr mp3 decoder
+// For mp3 decoder
 #define FILE_READ_BUFFER_SIZE (1024 * 16)
 MP3FrameInfo mp3FrameInfo;
 HMP3Decoder hMP3Decoder;
@@ -101,7 +102,7 @@ int16_t audio_buff[2304*2] = {0};
 volatile uint32_t delay1 = 1000;
 volatile uint32_t core_clock;
 
-uint8_t mp3_files[1000][15];  // to save file names
+uint8_t mp3_files[1000][20];  // to save file names
 int mp3_file_index;
 int mp3_total_files;
 
@@ -146,55 +147,18 @@ static const sdmmchost_pwr_card_t s_sdCardPwrCtrl = {
  */
 int main(void) {
 
+    dac_out_init();
 
 	gpioMode(PORTNUM2PIN(PA,10), INPUT);
 	gpioIRQ(PORTNUM2PIN(PA,10), GPIO_IRQ_MODE_FALLING_EDGE, sw3_interrupt);
 
-    FRESULT error;
-    DIR directory; /* Directory object */
+	DIR directory; /* Directory object */
+	do{
+	} while(init_sd_card(&directory)!=0);
 
-    FILINFO fileInformation;
-    UINT bytesWritten;
-    UINT bytesRead;
-    const TCHAR driverNumberBuffer[3U] = {SDDISK + '0', ':', '/'};
-    volatile bool failedFlag = false;
-    char ch = '0';
-    BYTE work[FF_MAX_SS];
+    /*****Listamos de las canciones que hay en mp3_files*****/
 
-    BOARD_InitPins();
-    BOARD_BootClockRUN();
-    BOARD_InitDebugConsole();
-    SYSMPU_Enable(SYSMPU, false);
-    dac_out_init();
-
-
-    PRINTF("\r\nPlease insert a card into board.\r\n");
-
-    if (sdcardWaitCardInsert() != kStatus_Success) {
-        return -1;
-    }
-
-    if (f_mount(&g_fileSystem, driverNumberBuffer, 0U)) {
-        PRINTF("Mount volume failed.\r\n");
-        return -1;
-    }
-
-#if (FF_FS_RPATH >= 2U)
-    error = f_chdrive((char const *)&driverNumberBuffer[0U]);
-    if (error) {
-        PRINTF("Change drive failed.\r\n");
-        return -1;
-    }
-#endif
-
-    PRINTF("\r\nList the file in that directory......\r\n");
-    if (f_opendir(&directory, "/")) {
-        PRINTF("Open directory failed.\r\n");
-        return -1;
-    }
-
-    /**************Lista de las canciones que hay*****/
-    volatile FILINFO files;
+    FILINFO files;
     FRESULT res;
 
     while (1) {
@@ -210,16 +174,11 @@ int main(void) {
             PRINTF("%s\r\n", files.fname);
         }
     }
-    /****************************/
 
-    gpioMode(PORTNUM2PIN(PC, 16), OUTPUT);
-    gpioMode(PORTNUM2PIN(PB, 19), OUTPUT);
+    /***************/
 
-    mp3_file_index = 2;
+    mp3_file_index = 1; //ahora mismo elegimos directo la 3ra cancion que aparece y la cargamos
     play_file(mp3_files[mp3_file_index], true);
-
-    int aux = 10;
-    int aux2 = false;
 
     init_sw();
 
@@ -229,6 +188,45 @@ int main(void) {
     	}
     }
 }
+
+char init_sd_card(DIR*directory){
+
+		FRESULT error;
+
+		const TCHAR driverNumberBuffer[3U] = {SDDISK + '0', ':', '/'};
+
+		BOARD_InitPins();
+		BOARD_BootClockRUN();
+		BOARD_InitDebugConsole();
+		SYSMPU_Enable(SYSMPU, false);
+
+		PRINTF("\r\nPlease insert a card into board.\r\n");
+
+		if (sdcardWaitCardInsert() != kStatus_Success) {
+			return -1;
+		}
+
+		if (f_mount(&g_fileSystem, driverNumberBuffer, 0U)) {
+			PRINTF("Mount volume failed.\r\n");
+			return -1;
+		}
+
+		#if (FF_FS_RPATH >= 2U)
+			error = f_chdrive((char const *)&driverNumberBuffer[0U]);
+			if (error) {
+				PRINTF("Change drive failed.\r\n");
+				return -1;
+			}
+		#endif
+
+		PRINTF("\r\nList the file in that directory......\r\n");
+		if (f_opendir(directory, "/")) {
+			PRINTF("Open directory failed.\r\n");
+			return -1;
+		}
+
+		return 0;
+	}
 
 static status_t sdcardWaitCardInsert(void) {
     /* Save host information. */
