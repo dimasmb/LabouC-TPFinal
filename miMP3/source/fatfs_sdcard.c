@@ -49,6 +49,24 @@
 #include "fsl_sysmpu.h"
 #include "gpio.h"
 #include "pin_mux.h"
+
+
+//para el button press de pausa
+
+#include "gpio.h"
+
+volatile bool g_ButtonPress = false;
+
+void sw3_interrupt(){
+	g_ButtonPress = !g_ButtonPress;
+}
+
+void init_sw(){
+	gpioMode (PORTNUM2PIN(PA,4) , INPUT);
+	gpioIRQ(PORTNUM2PIN(PA,4), GPIO_IRQ_MODE_FALLING_EDGE, sw3_interrupt);
+
+}
+
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
@@ -62,7 +80,7 @@
  * @brief wait card insert function.
  */
 static status_t sdcardWaitCardInsert(void);
-void play_file(char *mp3_fname);
+void play_file(char *mp3_fname, char first_call);
 
 /*******************************************************************************
  * Variables
@@ -128,6 +146,10 @@ static const sdmmchost_pwr_card_t s_sdCardPwrCtrl = {
  */
 int main(void) {
 
+
+	gpioMode(PORTNUM2PIN(PA,10), INPUT);
+	gpioIRQ(PORTNUM2PIN(PA,10), GPIO_IRQ_MODE_FALLING_EDGE, sw3_interrupt);
+
     FRESULT error;
     DIR directory; /* Directory object */
 
@@ -190,12 +212,22 @@ int main(void) {
     }
     /****************************/
 
-
     gpioMode(PORTNUM2PIN(PC, 16), OUTPUT);
     gpioMode(PORTNUM2PIN(PB, 19), OUTPUT);
 
     mp3_file_index = 2;
-    play_file(mp3_files[mp3_file_index]);
+    play_file(mp3_files[mp3_file_index], true);
+
+    int aux = 10;
+    int aux2 = false;
+
+    init_sw();
+
+    while(1){
+    	if(!g_ButtonPress){
+    		play_file(mp3_files[mp3_file_index], false);
+    	}
+    }
 }
 
 static status_t sdcardWaitCardInsert(void) {
@@ -227,103 +259,104 @@ static status_t sdcardWaitCardInsert(void) {
     return kStatus_Success;
 }
 
-void play_file(char *mp3_fname) {
-    if (strlen(mp3_fname) == 0) {
-    	while (1);
-    }
+void play_file(char *mp3_fname, char first_call) {
 
-    FIL fil;    /* File object */
-    FRESULT fr; /* FatFs return code */
-    uint32_t time = 0;
-    uint32_t seconds = 0, prev_seconds = 0, minutes = 0;
+	static FIL fil;    /* File object */
+	static FRESULT fr; /* FatFs return code */
+	static uint32_t time, prev_seconds, minutes;
+	static uint32_t seconds;
+	static int offset, err;
+	static int outOfData;
+    static unsigned int br, btr;
+    static int16_t *samples;
 
-    /* Open a text file */
-    fr = f_open(&fil, mp3_fname, FA_READ);
+	if(first_call){
+		if (strlen(mp3_fname) == 0) {
+		    	while (1);
+		    }
 
-    if (fr) {
-        while (1);
-    }
+		    time = 0;
+		    seconds = 0, prev_seconds = 0, minutes = 0;
 
-    // Read ID3v2 Tag
+		    /* Open a text file */
+		    fr = f_open(&fil, mp3_fname, FA_READ);
 
-    hMP3Decoder = MP3InitDecoder();
+		    if (fr) {
+		        while (1);
+		    }
 
-    bytes_left = 0;
+		    // Read ID3v2 Tag
 
-    int offset, err;
-    int outOfData = 0;
-
-    unsigned int br, btr;
-
-    int16_t *samples = pcm_buff;
-
-    while (1) {
-
-        for (int t = 0; t < 4; t++) {
-            if (bytes_left < FILE_READ_BUFFER_SIZE / 2) {  // Se crea un ping pong buffer
-                memcpy(read_buff, read_ptr, bytes_left);
-                read_ptr = read_buff;
-                btr = FILE_READ_BUFFER_SIZE - bytes_left;
-                fr = f_read(&fil, read_buff + bytes_left, btr, &br);
-                bytes_left = FILE_READ_BUFFER_SIZE;
-                if (fr || br < btr) {
-                    f_close(&fil);
-                    return;
-                }
-            }
-
-            offset = MP3FindSyncWord((unsigned char *)read_ptr, bytes_left);
-            if (offset == -1) {
-                bytes_left = 0;
-            }
-            bytes_left -= offset;
-            read_ptr += offset;
-            err = MP3Decode(hMP3Decoder, (unsigned char **)&read_ptr, (int *)&bytes_left, samples, 0);
-            if (err) {
-                /* error occurred */
-                switch (err) {
-                    case ERR_MP3_INDATA_UNDERFLOW:
-                        outOfData = 1;
-                        break;
-                    case ERR_MP3_MAINDATA_UNDERFLOW:
-                        /* do nothing - next call to decode will provide more mainData */
-                        break;
-                    case ERR_MP3_NULL_POINTER:
-                        bytes_left -= 1;
-                        read_ptr += 1;
-                    case ERR_MP3_FREE_BITRATE_SYNC:
-                    	break;
-                    case ERR_MP3_INVALID_FRAMEHEADER:
-                    	break;
-                    default:
-                        outOfData = 1;
-                        break;
-                }
-            } else {
-                MP3GetLastFrameInfo(hMP3Decoder, &mp3FrameInfo);
-                if (mp3FrameInfo.nChans == 2) {
-                    for (int i = 0; i < mp3FrameInfo.outputSamps; i += 2) {
-                        uint16_t aux = (uint16_t)(((samples[i] + samples[i + 1]) >> 5) + 2047);
-                        int index = t * 1152 + i / 2;
-                        audio_buff[index] = aux;
-                    }
-                } else if (mp3FrameInfo.nChans == 1) {
-                    for (int i = 0; i < mp3FrameInfo.outputSamps; i += 1) {
-                        uint16_t aux = (uint16_t)(((samples[i] + samples[i + 1]) >> 5) + 2047);
-                        int index = t * 1152 + i;
-                        audio_buff[index] = aux;
-                    }
-                }
-            }
-        }
+		    hMP3Decoder = MP3InitDecoder();
+		    bytes_left = 0;
+		    outOfData = 0;
+			samples = pcm_buff;
+	}
 
 
-        if (!outOfData) {
-            int status_buf = 0;
-            do {
-                status_buf = fill_buffer(audio_buff);
+	for (int t = 0; t < 4; t++) {
+		if (bytes_left < FILE_READ_BUFFER_SIZE / 2) {  // Se crea un ping pong buffer
+			memcpy(read_buff, read_ptr, bytes_left);
+			read_ptr = read_buff;
+			btr = FILE_READ_BUFFER_SIZE - bytes_left;
+			fr = f_read(&fil, read_buff + bytes_left, btr, &br);
+			bytes_left = FILE_READ_BUFFER_SIZE;
+			if (fr || br < btr) {
+				f_close(&fil);
+				return;
+			}
+		}
 
-            } while (status_buf == 0);
-        }
-    }
+		offset = MP3FindSyncWord((unsigned char *)read_ptr, bytes_left);
+		if (offset == -1) {
+			bytes_left = 0;
+		}
+		bytes_left -= offset;
+		read_ptr += offset;
+		err = MP3Decode(hMP3Decoder, (unsigned char **)&read_ptr, (int *)&bytes_left, samples, 0);
+		if (err) {
+			/* error occurred */
+			switch (err) {
+				case ERR_MP3_INDATA_UNDERFLOW:
+					outOfData = 1;
+					break;
+				case ERR_MP3_MAINDATA_UNDERFLOW:
+					/* do nothing - next call to decode will provide more mainData */
+					break;
+				case ERR_MP3_NULL_POINTER:
+					bytes_left -= 1;
+					read_ptr += 1;
+				case ERR_MP3_FREE_BITRATE_SYNC:
+					break;
+				case ERR_MP3_INVALID_FRAMEHEADER:
+					break;
+				default:
+					outOfData = 1;
+					break;
+			}
+		} else {
+			MP3GetLastFrameInfo(hMP3Decoder, &mp3FrameInfo);
+			if (mp3FrameInfo.nChans == 2) {
+				for (int i = 0; i < mp3FrameInfo.outputSamps; i += 2) {
+					uint16_t aux = (uint16_t)(((samples[i] + samples[i + 1]) >> 5) + 2047);
+					int index = t * 1152 + i / 2;
+					audio_buff[index] = aux;
+				}
+			} else if (mp3FrameInfo.nChans == 1) {
+				for (int i = 0; i < mp3FrameInfo.outputSamps; i += 1) {
+					uint16_t aux = (uint16_t)(((samples[i] + samples[i + 1]) >> 5) + 2047);
+					int index = t * 1152 + i;
+					audio_buff[index] = aux;
+				}
+			}
+		}
+	}
+
+	if (!outOfData) {
+		int status_buf = 0;
+		do {
+			status_buf = fill_dma_buffer(audio_buff);
+		} while (status_buf == 0);
+	}
+
 }

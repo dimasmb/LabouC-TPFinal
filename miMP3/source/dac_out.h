@@ -17,7 +17,7 @@ void dac_out_pause();
 void dac_out_unpause();
 
 void dac_out_reboot();
-int fill_buffer(uint16_t* original_buf);
+int fill_dma_buffer(uint16_t* original_buf);
 void normalizeDoubleVector(uint16_t* output, double* input, int length);
 
 

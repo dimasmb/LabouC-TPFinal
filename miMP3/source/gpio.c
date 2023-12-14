@@ -234,7 +234,66 @@ int convers(int tipo){
     return 15;//error
 }
 
+void IRQs_Handler(int num_pin) {
+	(*CALLBACKS[num_pin])();
+}
+int Search_ISF(int port){			//FALTA TERMINAR.
+	uint32_t ISFR_Port;
+	uint32_t MASK=1; //MASCARA DE 1.
+	int num_pin=(PINS_POR_PUERTO*5)-1;
+	switch(port){
+		case(PA): ISFR_Port=PORTA->ISFR;//SALVO EL REGISTRO
+			for(num_pin=0; num_pin<32;){
+				if((ISFR_Port & MASK)==1) {return num_pin;}	//la mascara busca anular el resto de los valores y encontrar el primero
+				num_pin+=1;
+				ISFR_Port=ISFR_Port>>1;}break;		//shifteo 1
+		case(PB):ISFR_Port=PORTB->ISFR;
+			for(num_pin=0; num_pin<32;){
+				if((ISFR_Port & MASK)==1) {return num_pin;}
+				num_pin+=1;
+				ISFR_Port=ISFR_Port>>1;}break;
+		case(PC):ISFR_Port=PORTC->ISFR;
+			for(num_pin=0; num_pin<32;){
+				if((ISFR_Port & MASK)==1) {return num_pin;}
+				num_pin+=1;
+				ISFR_Port=ISFR_Port>>1;}break;
+		case(PD):ISFR_Port=PORTD->ISFR;
+			for(num_pin=0; num_pin<32;){
+				if((ISFR_Port & MASK)==1) {return num_pin;}
+				num_pin+=1;
+				ISFR_Port=ISFR_Port>>1;}break;
+		case(PE):ISFR_Port=PORTE->ISFR;
+			for(num_pin=0; num_pin<32;){
+				if((ISFR_Port & MASK)==1) {return num_pin;}
+				num_pin+=1;
+				ISFR_Port=ISFR_Port>>1;}break;
+		default:break;
+	}
+	return num_pin;
 
+}
+
+/*Funciones que se llaman de manera automatica*/
+__ISR__ PORTA_IRQHandler(void) {
+	int num_pin=Search_ISF(PA);
+	PORTA->PCR[num_pin]|=PORT_PCR_ISF_MASK;  //Se baja el flag de ISF
+	IRQs_Handler(num_pin); }
+__ISR__ PORTB_IRQHandler(void) {
+	int num_pin=Search_ISF(PB);
+	PORTB->PCR[num_pin]|=PORT_PCR_ISF_MASK;
+	IRQs_Handler(num_pin+OFFSET_PORTB); } //offset del portB
+__ISR__ PORTC_IRQHandler(void) {
+	int num_pin=Search_ISF(PC);
+	PORTC->PCR[num_pin]|=PORT_PCR_ISF_MASK;
+	IRQs_Handler(num_pin+OFFSET_PORTC); }
+__ISR__ PORTD_IRQHandler(void) {
+	int num_pin=Search_ISF(PD);
+	PORTD->PCR[num_pin]|=PORT_PCR_ISF_MASK;
+	IRQs_Handler(num_pin+OFFSET_PORTD); }
+/*__ISR__ PORTE_IRQHandler(void) {
+	int num_pin=Search_ISF(PE);
+	PORTE->PCR[num_pin]|=PORT_PCR_ISF_MASK;
+	IRQs_Handler(num_pin+OFFSET_PORTE); }*/
 
 /*******************************************************************************
  ******************************************************************************/

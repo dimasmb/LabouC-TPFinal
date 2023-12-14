@@ -139,7 +139,7 @@ void init_dma(){
 	EDMA_SetCallback(&fillbuf_EDMA_Handle, EDMA_Callback, NULL);
 }
 
-int fill_buffer(uint16_t*original_buf) {
+int fill_dma_buffer(uint16_t*original_buf) {
 
 	if(music_buffer.next_buffer_ready || ongoing_transfer) return 0; //abortamos, el prox buffer ya está listo
 	ongoing_transfer = true;
