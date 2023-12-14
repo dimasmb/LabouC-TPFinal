@@ -96,7 +96,7 @@
 									<listOptionValue builtIn="false" value="../sdmmc/port"/>
 								</option>
 								<option id="gnu.c.compiler.option.include.files.682782454" name="Include files (-include)" superClass="gnu.c.compiler.option.include.files" useByScannerDiscovery="false"/>
-								<option id="com.crt.advproject.gcc.exe.debug.option.optimization.level.710721480" name="Optimization Level" superClass="com.crt.advproject.gcc.exe.debug.option.optimization.level" useByScannerDiscovery="false" value="gnu.c.optimization.level.more" valueType="enumerated"/>
+								<option id="com.crt.advproject.gcc.exe.debug.option.optimization.level.710721480" name="Optimization Level" superClass="com.crt.advproject.gcc.exe.debug.option.optimization.level" useByScannerDiscovery="false" value="gnu.c.optimization.level.none" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.optimization.flags.1319069530" name="Other optimization flags" superClass="gnu.c.compiler.option.optimization.flags" useByScannerDiscovery="false" value="-fno-common" valueType="string"/>
 								<option id="com.crt.advproject.gcc.exe.debug.option.debugging.level.1209145567" name="Debug Level" superClass="com.crt.advproject.gcc.exe.debug.option.debugging.level" useByScannerDiscovery="false" value="gnu.c.debugging.level.default" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.debugging.other.1834198201" name="Other debugging flags" superClass="gnu.c.compiler.option.debugging.other" useByScannerDiscovery="false"/>
@@ -261,36 +261,19 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<folderInfo id="com.crt.advproject.config.exe.debug.1313927357.34379787" name="/" resourcePath="helix">
-						<toolChain id="com.crt.advproject.toolchain.exe.debug.302144740" name="NXP MCU Tools" superClass="com.crt.advproject.toolchain.exe.debug" unusedChildren="">
-							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF;org.eclipse.cdt.core.GNU_ELF" id="com.crt.advproject.platform.exe.debug" name="ARM-based MCU (Debug)" superClass="com.crt.advproject.platform.exe.debug"/>
-							<tool id="com.crt.advproject.cpp.exe.debug.1078076331" name="MCU C++ Compiler" superClass="com.crt.advproject.cpp.exe.debug.1836330686"/>
-							<tool id="com.crt.advproject.gcc.exe.debug.393605396" name="MCU C Compiler" superClass="com.crt.advproject.gcc.exe.debug.1703754753">
-								<option id="com.crt.advproject.gcc.exe.debug.option.optimization.level.1885512583" name="Optimization Level" superClass="com.crt.advproject.gcc.exe.debug.option.optimization.level" useByScannerDiscovery="false" value="gnu.c.optimization.level.most" valueType="enumerated"/>
-								<inputType id="com.crt.advproject.compiler.input.1341838735" superClass="com.crt.advproject.compiler.input"/>
+					<folderInfo id="com.crt.advproject.config.exe.debug.1313927357.1972146673" name="/" resourcePath="helix">
+						<toolChain id="com.crt.advproject.toolchain.exe.debug.841439845" name="NXP MCU Tools" superClass="com.crt.advproject.toolchain.exe.debug" unusedChildren="">
+							<tool id="com.crt.advproject.cpp.exe.debug.1913014155" name="MCU C++ Compiler" superClass="com.crt.advproject.cpp.exe.debug.1836330686"/>
+							<tool id="com.crt.advproject.gcc.exe.debug.423608364" name="MCU C Compiler" superClass="com.crt.advproject.gcc.exe.debug.1703754753">
+								<option id="com.crt.advproject.gcc.exe.debug.option.optimization.level.1189352438" superClass="com.crt.advproject.gcc.exe.debug.option.optimization.level" useByScannerDiscovery="false" value="gnu.c.optimization.level.most" valueType="enumerated"/>
+								<inputType id="com.crt.advproject.compiler.input.884285462" superClass="com.crt.advproject.compiler.input"/>
 							</tool>
-							<tool id="com.crt.advproject.gas.exe.debug.1989839403" name="MCU Assembler" superClass="com.crt.advproject.gas.exe.debug.1207344714">
-								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.893819183" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
-								<inputType id="com.crt.advproject.assembler.input.322053646" name="Additional Assembly Source Files" superClass="com.crt.advproject.assembler.input"/>
+							<tool id="com.crt.advproject.gas.exe.debug.203000972" name="MCU Assembler" superClass="com.crt.advproject.gas.exe.debug.1207344714">
+								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.426095562" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
+								<inputType id="com.crt.advproject.assembler.input.1636688709" name="Additional Assembly Source Files" superClass="com.crt.advproject.assembler.input"/>
 							</tool>
-							<tool id="com.crt.advproject.link.cpp.exe.debug.751400168" name="MCU C++ Linker" superClass="com.crt.advproject.link.cpp.exe.debug.1240913714"/>
-							<tool id="com.crt.advproject.link.exe.debug.482289887" name="MCU Linker" superClass="com.crt.advproject.link.exe.debug.880388283"/>
-						</toolChain>
-					</folderInfo>
-					<folderInfo id="com.crt.advproject.config.exe.debug.1313927357.1762711839" name="/" resourcePath="source">
-						<toolChain id="com.crt.advproject.toolchain.exe.debug.25028261" name="NXP MCU Tools" superClass="com.crt.advproject.toolchain.exe.debug" unusedChildren="">
-							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF;org.eclipse.cdt.core.GNU_ELF" id="com.crt.advproject.platform.exe.debug" name="ARM-based MCU (Debug)" superClass="com.crt.advproject.platform.exe.debug"/>
-							<tool id="com.crt.advproject.cpp.exe.debug.657814300" name="MCU C++ Compiler" superClass="com.crt.advproject.cpp.exe.debug.1836330686"/>
-							<tool id="com.crt.advproject.gcc.exe.debug.159378376" name="MCU C Compiler" superClass="com.crt.advproject.gcc.exe.debug.1703754753">
-								<option id="com.crt.advproject.gcc.exe.debug.option.optimization.level.406788450" name="Optimization Level" superClass="com.crt.advproject.gcc.exe.debug.option.optimization.level" useByScannerDiscovery="false" value="gnu.c.optimization.level.more" valueType="enumerated"/>
-								<inputType id="com.crt.advproject.compiler.input.846712776" superClass="com.crt.advproject.compiler.input"/>
-							</tool>
-							<tool id="com.crt.advproject.gas.exe.debug.2035387436" name="MCU Assembler" superClass="com.crt.advproject.gas.exe.debug.1207344714">
-								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.46073507" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
-								<inputType id="com.crt.advproject.assembler.input.1144270743" name="Additional Assembly Source Files" superClass="com.crt.advproject.assembler.input"/>
-							</tool>
-							<tool id="com.crt.advproject.link.cpp.exe.debug.1632288383" name="MCU C++ Linker" superClass="com.crt.advproject.link.cpp.exe.debug.1240913714"/>
-							<tool id="com.crt.advproject.link.exe.debug.2008249454" name="MCU Linker" superClass="com.crt.advproject.link.exe.debug.880388283"/>
+							<tool id="com.crt.advproject.link.cpp.exe.debug.1869719311" name="MCU C++ Linker" superClass="com.crt.advproject.link.cpp.exe.debug.1240913714"/>
+							<tool id="com.crt.advproject.link.exe.debug.1647674507" name="MCU Linker" superClass="com.crt.advproject.link.exe.debug.880388283"/>
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>

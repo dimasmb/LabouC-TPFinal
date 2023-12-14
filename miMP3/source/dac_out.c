@@ -92,15 +92,19 @@ void init_dma2(){
                          sizeof(uint16_t) * BUFLEN,
                          kEDMA_MemoryToPeripheral);
     EDMA_TcdSetTransferConfig(tcdMemoryPoolPtr, &transferConfig, &tcdMemoryPoolPtr[1]);
+    EDMA_TcdDisableInterrupts(tcdMemoryPoolPtr, kEDMA_HalfInterruptEnable);
     EDMA_TcdEnableInterrupts(tcdMemoryPoolPtr, kEDMA_MajorInterruptEnable);
+
 
     /* prepare descriptor 1 */
     EDMA_PrepareTransfer(&transferConfig, music_buffer.next_buffer, sizeof(uint16_t), &(DAC0->DAT[0]), sizeof(uint16_t),
                          sizeof(uint16_t),
                          sizeof(uint16_t) * BUFLEN,
                          kEDMA_MemoryToPeripheral);
-    EDMA_TcdSetTransferConfig(&tcdMemoryPoolPtr[1], &transferConfig, &tcdMemoryPoolPtr[0]);
+    EDMA_TcdSetTransferConfig(&tcdMemoryPoolPtr[1], &transferConfig, tcdMemoryPoolPtr);
+    EDMA_TcdDisableInterrupts(&tcdMemoryPoolPtr[1], kEDMA_HalfInterruptEnable);
     EDMA_TcdEnableInterrupts(&tcdMemoryPoolPtr[1], kEDMA_MajorInterruptEnable);
+
 
     intallTCD(my_DMA, PINGPONG_CH, tcdMemoryPoolPtr);
     EDMA_StartTransfer(&g_EDMA_Handle);
@@ -136,7 +140,6 @@ void init_dma(){
 }
 
 int fill_buffer(uint16_t*original_buf) {
-
 
 	if(music_buffer.next_buffer_ready || ongoing_transfer) return 0; //abortamos, el prox buffer ya está listo
 	ongoing_transfer = true;
@@ -194,4 +197,3 @@ void dac_out_reboot(){
 	//HAY QUE ACTUALIZAR ESTOO
 	return;
 }
-
