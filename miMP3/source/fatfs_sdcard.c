@@ -49,6 +49,7 @@
 #include "fsl_sysmpu.h"
 #include "gpio.h"
 #include "pin_mux.h"
+#include "fir.h"
 
 
 //para el button press de pausa
@@ -91,6 +92,7 @@ static FIL g_fileObject;   /* File object */
 
 // For mp3 decoder
 #define FILE_READ_BUFFER_SIZE (1024 * 16)
+
 MP3FrameInfo mp3FrameInfo;
 HMP3Decoder hMP3Decoder;
 uint8_t read_buff[FILE_READ_BUFFER_SIZE];
@@ -99,6 +101,8 @@ int bytes_left;
 char *read_ptr;
 int16_t pcm_buff[2304];
 int16_t audio_buff[2304*2] = {0};
+float floatbuf[1152];
+float floatbuf_filtered[1152];
 volatile uint32_t delay1 = 1000;
 volatile uint32_t core_clock;
 
@@ -147,10 +151,10 @@ static const sdmmchost_pwr_card_t s_sdCardPwrCtrl = {
  */
 int main(void) {
 
-    dac_out_init();
+	gpioMode (PORTNUM2PIN(PC,16) , OUTPUT);
 
-	gpioMode(PORTNUM2PIN(PA,10), INPUT);
-	gpioIRQ(PORTNUM2PIN(PA,10), GPIO_IRQ_MODE_FALLING_EDGE, sw3_interrupt);
+    dac_out_init();
+    firFloatInit();
 
 	DIR directory; /* Directory object */
 	do{
@@ -265,8 +269,8 @@ int play_file(char *mp3_fname, char first_call) {
 
 	static FIL fil;    /* File object */
 	static FRESULT fr; /* FatFs return code */
-	static uint32_t time, prev_seconds, minutes;
-	static uint32_t seconds;
+	//static uint32_t time, prev_seconds, minutes;
+	//static uint32_t seconds;
 	static int offset, err;
 	static int outOfData;
     static unsigned int br, btr;
@@ -277,8 +281,8 @@ int play_file(char *mp3_fname, char first_call) {
 		    	while (1);
 		    }
 
-		    time = 0;
-		    seconds = 0, prev_seconds = 0, minutes = 0;
+		    //time = 0;
+		    //seconds = 0, prev_seconds = 0, minutes = 0;
 
 		    /* Open a text file */
 		    fr = f_open(&fil, mp3_fname, FA_READ);
@@ -336,28 +340,29 @@ int play_file(char *mp3_fname, char first_call) {
 					outOfData = 1;
 					break;
 			}
-		} else {
+		}
+		else {
 			MP3GetLastFrameInfo(hMP3Decoder, &mp3FrameInfo);
-			if (mp3FrameInfo.nChans == 2) {
-				for (int i = 0; i < mp3FrameInfo.outputSamps; i += 2) {
-					uint16_t aux = (uint16_t)(((samples[i] + samples[i + 1]) >> 5) + 2047);
-					int index = t * 1152 + i / 2;
-					audio_buff[index] = aux;
-				}
-			} else if (mp3FrameInfo.nChans == 1) {
-				for (int i = 0; i < mp3FrameInfo.outputSamps; i += 1) {
-					uint16_t aux = (uint16_t)(((samples[i] + samples[i + 1]) >> 5) + 2047);
-					int index = t * 1152 + i;
-					audio_buff[index] = aux;
-				}
+			gpioWrite (PORTNUM2PIN(PC,16) , HIGH);
+			intToFloat(samples, floatbuf, 1152, mp3FrameInfo.nChans == 2);
+			for(int j = 0; j<16; j++){
+				firFloat( coeffs, floatbuf+j*72, floatbuf_filtered+j*72, 72, FILTER_LEN);
 			}
+			floatToInt( floatbuf, audio_buff+(t * 1152), 1152);
+			gpioWrite (PORTNUM2PIN(PC,16) , LOW);
+
 		}
 	}
 
 	if (!outOfData) {
 		int status_buf = 0;
 		do {
+			int k;
+			for(k = 0; k<(1152*4); k++){
+				audio_buff[k] = (audio_buff[k]>>5)+2047;
+			}
 			status_buf = fill_dma_buffer(audio_buff);
+
 		} while (status_buf == 0);
 	}
 	return outOfData;

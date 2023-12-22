@@ -39,7 +39,7 @@ AT_QUICKACCESS_SECTION_DATA_ALIGN(edma_tcd_t tcdMemoryPoolPtr[TCD_QUEUE_SIZE + 1
 
 edma_handle_t g_EDMA_Handle;
 
-ping_pong_buffer_t music_buffer = {
+static ping_pong_buffer_t music_buffer = {
 		.buffer1 = {0},
 		.buffer2 = {0},
 		.next_buffer =music_buffer.buffer2,
