@@ -1,5 +1,9 @@
+#include "MK64F12.h"
+
+
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "board.h"
 #include "diskio.h"
@@ -15,7 +19,7 @@
 #include "fsl_sysmpu.h"
 #include "gpio.h"
 #include "pin_mux.h"
-
+#include "equalizer.h"
 
 //para el button press de pausa
 
@@ -48,6 +52,8 @@ void init_sw(){
 
 /* buffer size (in byte) for read/write operations */
 #define BUFFER_SIZE (100U)
+#define MP3FRAMES_PER_OUTBUF 4
+#define OUTBUFLEN 1152*MP3FRAMES_PER_OUTBUF
 /*******************************************************************************
  * Prototypes
  ******************************************************************************/
@@ -64,6 +70,8 @@ int play_file(char *mp3_fname, char first_call);
 static FATFS g_fileSystem; /* File system object */
 static FIL g_fileObject;   /* File object */
 
+
+
 // For mp3 decoder
 #define FILE_READ_BUFFER_SIZE (1024 * 16)
 MP3FrameInfo mp3FrameInfo;
@@ -73,7 +81,10 @@ uint32_t bytes_read;
 int bytes_left;
 char *read_ptr;
 int16_t pcm_buff[2304];
-int16_t audio_buff[2304*2] = {0};
+int16_t audio_buff[OUTBUFLEN] = {0};
+float audio_buff_float[OUTBUFLEN] = {0};
+
+
 volatile uint32_t delay1 = 1000;
 volatile uint32_t core_clock;
 
@@ -124,8 +135,8 @@ int main(void) {
 
     dac_out_init();
 
-	gpioMode(PORTNUM2PIN(PA,10), INPUT);
-	gpioIRQ(PORTNUM2PIN(PA,10), GPIO_IRQ_MODE_FALLING_EDGE, sw3_interrupt);
+	gpioMode(PORTNUM2PIN(PB,9), OUTPUT);
+	gpioWrite (PORTNUM2PIN(PB,9), LOW);
 
 	DIR directory; /* Directory object */
 	do{
@@ -248,6 +259,7 @@ int play_file(char *mp3_fname, char first_call) {
     static int16_t *samples;
 
 	if(first_call){
+		equalizer_init(URBAN); // puede ser ROCK CLASSICAL URBAN o NONE
 		if (strlen(mp3_fname) == 0) {
 		    	while (1);
 		    }
@@ -271,7 +283,7 @@ int play_file(char *mp3_fname, char first_call) {
 	}
 
 
-	for (int t = 0; t < 4; t++) {
+	for (int t = 0; t < MP3FRAMES_PER_OUTBUF; t++) {
 		if (bytes_left < FILE_READ_BUFFER_SIZE / 2) {  // Se crea un ping pong buffer
 			memcpy(read_buff, read_ptr, bytes_left);
 			read_ptr = read_buff;
@@ -332,7 +344,13 @@ int play_file(char *mp3_fname, char first_call) {
 	if (!outOfData) {
 		int status_buf = 0;
 		do {
+			gpioWrite (PORTNUM2PIN(PB,9), HIGH);
+			intToFloat(audio_buff, audio_buff_float, 2304*2);
+			equalize(audio_buff_float, audio_buff_float);
+			floatToInt(audio_buff_float, audio_buff, 2304*2);
 			status_buf = fill_dma_buffer(audio_buff);
+			gpioWrite (PORTNUM2PIN(PB,9), LOW);
+
 		} while (status_buf == 0);
 	}
 	return outOfData;

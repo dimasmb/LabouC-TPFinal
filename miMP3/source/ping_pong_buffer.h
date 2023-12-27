@@ -8,7 +8,7 @@
 #ifndef DRIVERS_PING_PONG_BUFFER_H_
 #define DRIVERS_PING_PONG_BUFFER_H_
 
-#define BUFLEN 2304*2
+#define BUFLEN 1152*4
 
 typedef struct {
 	uint16_t* current_buffer;
