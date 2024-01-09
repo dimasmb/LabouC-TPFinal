@@ -14,7 +14,7 @@
 #include "fsl_sd.h"
 #include "fsl_sd_disk.h"
 
-
+#include "play_audio.h"
 
 //para el button press de pausa
 
@@ -41,6 +41,8 @@ void init_sw(){
 
 }
 
+int analize_directory(char* currdir, char*nextdir, int string_len);
+
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
@@ -64,14 +66,6 @@ static FIL g_fileObject;   /* File object */
 
 volatile uint32_t delay1 = 1000;
 volatile uint32_t core_clock;
-
-uint8_t mp3_files[1000][20];  // to save file names
-int mp3_file_index;
-int mp3_total_files;
-
-uint8_t folder_files[1000][20];  // to save file names
-int folder_file_index;
-int folder_total_files;
 
 volatile uint8_t next, prev, replay, mute, ffd, reset, play, volume = 5;
 
@@ -122,50 +116,17 @@ int main(void) {
 	gpioMode(PORTNUM2PIN(PB,9), OUTPUT);
 	gpioWrite (PORTNUM2PIN(PB,9), LOW);
 
-
 	do{
 	} while(init_sd_card()!=0);
 
-	/*****Abrimos el directorio raíz*****/
+	/***mandamos por UART todos los archivos****/
+	char directory_string[1000];
+	strcpy(directory_string, "");
+	analize_directory(directory_string, "", 0);
 
-	DIR directory; /* Directory object */
+    /*******AHORA ESA PUESTO ARBITRARIAMENTE ESTE ARCHIVO********/
 
-	PRINTF("\r\nList the file in that directory......\r\n");
-	if (f_opendir(&directory, "/carpeta1/carpeta2")) {
-		PRINTF("Open directory failed.\r\n");
-		return -1;
-	}
-
-    /*****Listamos de las canciones que hay en mp3_files*****/
-
-    FILINFO files;
-    FRESULT res;
-
-    while (1) {
-        res = f_readdir(&directory, &files);
-        if (res != FR_OK || strlen(files.fname) == 0) {
-            break;  ////f_opendir(&directory, "/");
-        }
-
-        if (strstr(files.fname, ".MP3")) {
-            strcpy(mp3_files[mp3_file_index], files.fname);  // to save file names
-            mp3_file_index++;
-            mp3_total_files++;
-            PRINTF("%s\r\n", files.fname);
-        }
-        else if (!(strstr(files.fname, "SYSTEM"))){
-            strcpy(folder_files[folder_file_index], files.fname);  // to save file names
-            folder_file_index++;
-            folder_total_files++;
-        	PRINTF("%s\r\n", files.fname);
-        }
-
-    }
-
-    /***************/
-
-    mp3_file_index = 0; //ahora mismo elegimos directo la 3ra cancion que aparece y la cargamos
-    play_file(mp3_files[mp3_file_index], true, volumen);
+    play_file("/CARPETA1/CARPETA2/HIGHER~1.MP3", true, volumen);
 
     init_sw();
 
@@ -173,13 +134,60 @@ int main(void) {
     while(1){
     	if(!g_ButtonPress){
 			gpioWrite (PORTNUM2PIN(PB,9), HIGH);
-    		int end_of_song = play_file(mp3_files[mp3_file_index], false, volumen);
+    		int end_of_song = play_file("/CARPETA1/CARPETA2/HIGHER~1.MP3", false, volumen);
     		gpioWrite (PORTNUM2PIN(PB,9), LOW);
     		if (end_of_song){
     			break;
     		}
     	}
     }
+
+}
+
+int analize_directory(char* currdir, char*nextdir, int string_len){
+	int len = string_len;
+	if(strcmp(currdir, "/")){
+		strcat(currdir,"/");
+	}
+	strcat(currdir, nextdir);
+
+
+	/*****Abrimos el directorio raíz*****/
+
+	DIR directory; /* Directory object */
+
+	//PRINTF("\r\nList the file in that directory...");
+	//PRINTF(currdir);
+	if (f_opendir(&directory, currdir)) {
+		//PRINTF("Open directory failed.\r\n");
+		return -1;
+	}
+
+    FILINFO files;
+    FRESULT res;
+
+    while (1) {
+
+        res = f_readdir(&directory, &files);
+
+        if (res != FR_OK || strlen(files.fname) == 0) {
+            break;
+        }
+        if (strstr(files.fname, ".MP3")) {
+        	PRINTF("\r\n");
+        	PRINTF(currdir);
+        	if(strcmp(currdir, "/")){
+        		PRINTF("/");
+        	}
+            PRINTF(files.fname);
+            PRINTF("\r\n");
+        }
+        else if (!(strstr(files.fname, "SYSTEM"))){
+        	analize_directory(currdir, files.fname, len + strlen(files.fname));
+        	currdir[string_len]='\0';
+        }
+    }
+    return 1;
 }
 
 char init_sd_card(){
