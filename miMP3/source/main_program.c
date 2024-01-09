@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdint.h>
 
+#include "fsl_sysmpu.h"
 #include "board.h"
 #include "diskio.h"
 #include "ff.h"
@@ -13,15 +14,7 @@
 #include "fsl_sd.h"
 #include "fsl_sd_disk.h"
 
-// funciones joaco
-#include "../helix/pub/mp3dec.h"
-#include "clock_config.h"
-#include "dac_out.h"
-#include "fsl_sysmpu.h"
-#include "gpio.h"
-#include "pin_mux.h"
-#include "equalizer.h"
-#include "fft.h"
+
 
 //para el button press de pausa
 
@@ -52,11 +45,7 @@ void init_sw(){
  * Definitions
  ******************************************************************************/
 
-/* buffer size (in byte) for read/write operations */
-#define BUFFER_SIZE (100U)
-#define MP3FRAMES_PER_OUTBUF 4
-#define OUTBUFLEN 1152*MP3FRAMES_PER_OUTBUF
-#define FFT_BINS 8
+
 
 /*******************************************************************************
  * Prototypes
@@ -64,9 +53,8 @@ void init_sw(){
 /*!
  * @brief wait card insert function.
  */
-char init_sd_card(DIR*);
+char init_sd_card();
 static status_t sdcardWaitCardInsert(void);
-int play_file(char *mp3_fname, char first_call);
 
 /*******************************************************************************
  * Variables
@@ -74,28 +62,16 @@ int play_file(char *mp3_fname, char first_call);
 static FATFS g_fileSystem; /* File system object */
 static FIL g_fileObject;   /* File object */
 
-
-
-// For mp3 decoder
-#define FILE_READ_BUFFER_SIZE (1024 * 16)
-MP3FrameInfo mp3FrameInfo;
-HMP3Decoder hMP3Decoder;
-uint8_t read_buff[FILE_READ_BUFFER_SIZE];
-uint32_t bytes_read;
-int bytes_left;
-char *read_ptr;
-int16_t pcm_buff[2304];
-int16_t audio_buff[OUTBUFLEN] = {0};
-float audio_buff_float[OUTBUFLEN] = {0};
-uint16_t fft_array[FFT_BINS] = {0.0};
-
-
 volatile uint32_t delay1 = 1000;
 volatile uint32_t core_clock;
 
 uint8_t mp3_files[1000][20];  // to save file names
 int mp3_file_index;
 int mp3_total_files;
+
+uint8_t folder_files[1000][20];  // to save file names
+int folder_file_index;
+int folder_total_files;
 
 volatile uint8_t next, prev, replay, mute, ffd, reset, play, volume = 5;
 
@@ -107,6 +83,9 @@ volatile uint8_t next, prev, replay, mute, ffd, reset, play, volume = 5;
  * DMA transfer is used, otherwise the buffer address is not important.
  * At the same time buffer address/size should be aligned to the cache line size if cache is supported.
  */
+
+#define BUFFER_SIZE (100U)
+
 SDK_ALIGN(uint8_t g_bufferWrite[SDK_SIZEALIGN(BUFFER_SIZE, SDMMC_DATA_BUFFER_ALIGN_CACHE)],
           MAX(SDMMC_DATA_BUFFER_ALIGN_CACHE, SDMMCHOST_DMA_BUFFER_ADDR_ALIGN));
 SDK_ALIGN(uint8_t g_bufferRead[SDK_SIZEALIGN(BUFFER_SIZE, SDMMC_DATA_BUFFER_ALIGN_CACHE)], MAX(SDMMC_DATA_BUFFER_ALIGN_CACHE, SDMMCHOST_DMA_BUFFER_ADDR_ALIGN));
@@ -138,14 +117,24 @@ static const sdmmchost_pwr_card_t s_sdCardPwrCtrl = {
  */
 int main(void) {
 
-    dac_out_init();
+	play_file_output_init();
 
 	gpioMode(PORTNUM2PIN(PB,9), OUTPUT);
 	gpioWrite (PORTNUM2PIN(PB,9), LOW);
 
-	DIR directory; /* Directory object */
+
 	do{
-	} while(init_sd_card(&directory)!=0);
+	} while(init_sd_card()!=0);
+
+	/*****Abrimos el directorio raíz*****/
+
+	DIR directory; /* Directory object */
+
+	PRINTF("\r\nList the file in that directory......\r\n");
+	if (f_opendir(&directory, "/carpeta1/carpeta2")) {
+		PRINTF("Open directory failed.\r\n");
+		return -1;
+	}
 
     /*****Listamos de las canciones que hay en mp3_files*****/
 
@@ -164,12 +153,19 @@ int main(void) {
             mp3_total_files++;
             PRINTF("%s\r\n", files.fname);
         }
+        else if (!(strstr(files.fname, "SYSTEM"))){
+            strcpy(folder_files[folder_file_index], files.fname);  // to save file names
+            folder_file_index++;
+            folder_total_files++;
+        	PRINTF("%s\r\n", files.fname);
+        }
+
     }
 
     /***************/
 
-    mp3_file_index = 1; //ahora mismo elegimos directo la 3ra cancion que aparece y la cargamos
-    play_file(mp3_files[mp3_file_index], true);
+    mp3_file_index = 0; //ahora mismo elegimos directo la 3ra cancion que aparece y la cargamos
+    play_file(mp3_files[mp3_file_index], true, volumen);
 
     init_sw();
 
@@ -177,7 +173,7 @@ int main(void) {
     while(1){
     	if(!g_ButtonPress){
 			gpioWrite (PORTNUM2PIN(PB,9), HIGH);
-    		int end_of_song = play_file(mp3_files[mp3_file_index], false);
+    		int end_of_song = play_file(mp3_files[mp3_file_index], false, volumen);
     		gpioWrite (PORTNUM2PIN(PB,9), LOW);
     		if (end_of_song){
     			break;
@@ -186,7 +182,7 @@ int main(void) {
     }
 }
 
-char init_sd_card(DIR*directory){
+char init_sd_card(){
 
 		FRESULT error;
 
@@ -215,12 +211,6 @@ char init_sd_card(DIR*directory){
 				return -1;
 			}
 		#endif
-
-		PRINTF("\r\nList the file in that directory......\r\n");
-		if (f_opendir(directory, "/")) {
-			PRINTF("Open directory failed.\r\n");
-			return -1;
-		}
 
 		return 0;
 	}
@@ -254,125 +244,3 @@ static status_t sdcardWaitCardInsert(void) {
     return kStatus_Success;
 }
 
-int play_file(char *mp3_fname, char first_call) {
-
-	static FIL fil;    /* File object */
-	static FRESULT fr; /* FatFs return code */
-	static uint32_t time, prev_seconds, minutes;
-	static uint32_t seconds;
-	static int offset, err;
-	static int outOfData;
-    static unsigned int br, btr;
-    static int16_t *samples;
-
-
-    static char last_segment_was_loaded = 1;
-
-
-    if(!last_segment_was_loaded){
-    	last_segment_was_loaded = fill_dma_buffer(audio_buff);
-    }
-    else{
-
-    	if(first_call){
-    			equalizer_init(URBAN); // puede ser ROCK CLASSICAL URBAN o NONE
-    			if (strlen(mp3_fname) == 0) {
-    			    	while (1);
-    			    }
-
-    			    time = 0;
-    			    seconds = 0, prev_seconds = 0, minutes = 0;
-
-    			    /* Open a text file */
-    			    fr = f_open(&fil, mp3_fname, FA_READ);
-
-    			    if (fr) {
-    			        while (1);
-    			    }
-
-    			    // Read ID3v2 Tag
-
-    			    hMP3Decoder = MP3InitDecoder();
-    			    bytes_left = 0;
-    			    outOfData = 0;
-    				samples = pcm_buff;
-    		}
-
-
-    		for (int t = 0; t < MP3FRAMES_PER_OUTBUF; t++) {
-    			if (bytes_left < FILE_READ_BUFFER_SIZE / 2) {  // Se crea un ping pong buffer
-    				memcpy(read_buff, read_ptr, bytes_left);
-    				read_ptr = read_buff;
-    				btr = FILE_READ_BUFFER_SIZE - bytes_left;
-    				fr = f_read(&fil, read_buff + bytes_left, btr, &br);
-    				bytes_left = FILE_READ_BUFFER_SIZE;
-    				if (fr || br < btr) {
-    					f_close(&fil);
-    					return;
-    				}
-    			}
-
-    			offset = MP3FindSyncWord((unsigned char *)read_ptr, bytes_left);
-    			if (offset == -1) {
-    				bytes_left = 0;
-    			}
-    			bytes_left -= offset;
-    			read_ptr += offset;
-    			err = MP3Decode(hMP3Decoder, (unsigned char **)&read_ptr, (int *)&bytes_left, samples, 0);
-    			if (err) {
-    				/* error occurred */
-    				switch (err) {
-    					case ERR_MP3_INDATA_UNDERFLOW:
-    						outOfData = 1;
-    						break;
-    					case ERR_MP3_MAINDATA_UNDERFLOW:
-    						/* do nothing - next call to decode will provide more mainData */
-    						break;
-    					case ERR_MP3_NULL_POINTER:
-    						bytes_left -= 1;
-    						read_ptr += 1;
-    					case ERR_MP3_FREE_BITRATE_SYNC:
-    						break;
-    					case ERR_MP3_INVALID_FRAMEHEADER:
-    						break;
-    					default:
-    						outOfData = 1;
-    						break;
-    				}
-    			} else {
-    				MP3GetLastFrameInfo(hMP3Decoder, &mp3FrameInfo);
-    				if (mp3FrameInfo.nChans == 2) {
-    					for (int i = 0; i < mp3FrameInfo.outputSamps; i += 2) {
-    						uint16_t aux = (uint16_t)(((samples[i] + samples[i + 1]) >> 5)/volumen + 2047);
-    						int index = t * 1152 + i / 2;
-    						audio_buff[index] = aux;
-    					}
-    				} else if (mp3FrameInfo.nChans == 1) {
-    					for (int i = 0; i < mp3FrameInfo.outputSamps; i += 1) {
-    						uint16_t aux = (uint16_t)(((samples[i] + samples[i + 1]) >> 5)/volumen + 2047);
-    						int index = t * 1152 + i;
-    						audio_buff[index] = aux;
-    					}
-    				}
-    			}
-    		}
-
-    		if (!outOfData) {
-    			int status_buf = 0;
-
-    			intToFloat(audio_buff, audio_buff_float, 2304*2);
-    			equalize(audio_buff_float, audio_buff_float);
-    			floatToInt(audio_buff_float, audio_buff, 2304*2);
-
-    			last_segment_was_loaded = fill_dma_buffer(audio_buff);
-
-
-    			get_fft(audio_buff_float, fft_array, FFT_BINS); //Es muy importante que esto este depsues de fill_dma_buffer :)
-
-
-
-    		}
-    }
-	return outOfData;
-
-}
