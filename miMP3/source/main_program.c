@@ -164,7 +164,11 @@ int main(void) {
 						eq_preset = NONE; //puede ser NONE, CLASSICAL, ROCK, URBAN
 						volumen = 1;
 						break;
-
+					case 'C':
+						strcpy(directory_string, "");
+						analize_directory(directory_string, "", 0);
+						UART_Send_Data(&eof, strlen(&eof));
+						break;
 					default:
 						break;
 				}
