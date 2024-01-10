@@ -91,7 +91,7 @@ int main(void) {
 
 	/***mandamos por UART todos los archivos****/
 
-	UART_Initialize(9600, 0);
+	UART_Initialize(115200, 1);
 	do{
 	} while(inputEmpty()==true || retreiveInput()!='C');
 
