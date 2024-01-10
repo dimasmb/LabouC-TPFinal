@@ -16,31 +16,6 @@
 
 #include "play_audio.h"
 
-//para el button press de pausa
-
-#include "gpio.h"
-
-volatile bool g_ButtonPress = false;
-
-void sw3_interrupt(){
-	g_ButtonPress = !g_ButtonPress;
-}
-
-static int volumen = 1;
-
-void sw2_interrupt(){
-	volumen ++;
-	if (volumen == 33) volumen = 1;
-}
-
-void init_sw(){
-	gpioMode (PORTNUM2PIN(PA,4) , INPUT);
-	gpioIRQ(PORTNUM2PIN(PA,4), GPIO_IRQ_MODE_FALLING_EDGE, sw3_interrupt);
-	gpioMode (PORTNUM2PIN(PC,6) , INPUT);
-	gpioIRQ(PORTNUM2PIN(PC,6), GPIO_IRQ_MODE_FALLING_EDGE, sw2_interrupt);
-
-}
-
 int analize_directory(char* currdir, char*nextdir, int string_len);
 
 /*******************************************************************************
@@ -113,9 +88,6 @@ int main(void) {
 
 	play_file_output_init();
 
-	gpioMode(PORTNUM2PIN(PB,9), OUTPUT);
-	gpioWrite (PORTNUM2PIN(PB,9), LOW);
-
 	do{
 	} while(init_sd_card()!=0);
 
@@ -126,22 +98,40 @@ int main(void) {
 
     /*******AHORA ESA PUESTO ARBITRARIAMENTE ESTE ARCHIVO********/
 
-    play_file("/CARPETA1/CARPETA2/HIGHER~1.MP3", true, volumen);
+	char selected_song [100];
+	strcpy(selected_song, "/CARPETA1/CARPETA2/HIGHER~1.MP3");
 
-    init_sw();
+	char end_of_song = false;
+	char play_new_song = true;
+	char pause = false;
+	int eq_preset = NONE; //puede ser NONE, CLASSICAL, ROCK, URBAN
+	int volumen = 1;
 
 
-    while(1){
-    	if(!g_ButtonPress){
-			gpioWrite (PORTNUM2PIN(PB,9), HIGH);
-    		int end_of_song = play_file("/CARPETA1/CARPETA2/HIGHER~1.MP3", false, volumen);
-    		gpioWrite (PORTNUM2PIN(PB,9), LOW);
-    		if (end_of_song){
-    			break;
-    		}
-    	}
-    }
 
+	int count = 0;
+	while(true){ //loop principal
+
+		//ACA HAY QUE CHEQUEAR UART Y UPDATEAR LOS FLAGS DE ARRIBA
+
+		if(pause == false || end_of_song == false){
+			if(play_new_song){
+				play_file(selected_song, play_new_song, volumen, eq_preset);
+				play_new_song = false;
+			}
+			else{
+				end_of_song = play_file(selected_song, play_new_song, volumen, eq_preset);
+				uint16_t* fft_pointer = get_fft_array();
+				/*//ESTO ES PARA TESTEAR EL CAMBIO DE CANCION, LA REINICIA AL TOQUE
+				if((count ++)==1000000){
+					play_new_song = true;
+					count = 0;
+				}*/
+
+			}
+
+		}
+	}
 }
 
 int analize_directory(char* currdir, char*nextdir, int string_len){

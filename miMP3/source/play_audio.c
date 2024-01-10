@@ -28,7 +28,7 @@
 // For mp3 decoder
 #define FILE_READ_BUFFER_SIZE (1024 * 16)
 MP3FrameInfo mp3FrameInfo;
-HMP3Decoder hMP3Decoder;
+HMP3Decoder hMP3Decoder = 0;
 uint8_t read_buff[FILE_READ_BUFFER_SIZE];
 uint32_t bytes_read;
 int bytes_left;
@@ -42,7 +42,9 @@ uint16_t fft_array[FFT_BINS] = {0.0};
 void play_file_output_init(){
 	dac_out_init();
 };
-int play_file(char *mp3_fname, char first_call, int volumen) {
+
+
+int play_file(char *mp3_fname, char first_call, int volumen, int equalizer) {
 
 	static FIL fil;    /* File object */
 	static FRESULT fr; /* FatFs return code */
@@ -53,9 +55,12 @@ int play_file(char *mp3_fname, char first_call, int volumen) {
     static unsigned int br, btr;
     static int16_t *samples;
 
-
     static char last_segment_was_loaded = 1;
 
+
+    if (first_call){
+    	last_segment_was_loaded = true;
+    }
 
     if(!last_segment_was_loaded){
     	last_segment_was_loaded = fill_dma_buffer(audio_buff);
@@ -63,7 +68,7 @@ int play_file(char *mp3_fname, char first_call, int volumen) {
     else{
 
     	if(first_call){
-    			equalizer_init(URBAN); // puede ser ROCK CLASSICAL URBAN o NONE
+    			equalizer_init(equalizer); // puede ser ROCK CLASSICAL URBAN o NONE
     			if (strlen(mp3_fname) == 0) {
     			    	while (1);
     			    }
@@ -79,7 +84,10 @@ int play_file(char *mp3_fname, char first_call, int volumen) {
     			    }
 
     			    // Read ID3v2 Tag
-
+    			    if(hMP3Decoder){
+    			    	MP3FreeDecoder(hMP3Decoder);
+    			    }
+    			    hMP3Decoder = 0;
     			    hMP3Decoder = MP3InitDecoder();
     			    bytes_left = 0;
     			    outOfData = 0;
@@ -123,6 +131,8 @@ int play_file(char *mp3_fname, char first_call, int volumen) {
     						break;
     					case ERR_MP3_INVALID_FRAMEHEADER:
     						break;
+    					case ERR_MP3_INVALID_HUFFCODES:
+    					    break;
     					default:
     						outOfData = 1;
     						break;
@@ -163,4 +173,8 @@ int play_file(char *mp3_fname, char first_call, int volumen) {
     }
 	return outOfData;
 
+}
+
+uint16_t* get_fft_array(void) {
+	return fft_array;
 }
