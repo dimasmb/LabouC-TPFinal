@@ -9,20 +9,16 @@
 #include "board.h"
 #include "diskio.h"
 #include "ff.h"
-#include "fsl_debug_console.h"
+//#include "fsl_debug_console.h"
 #include "fsl_gpio.h"
 #include "fsl_sd.h"
 #include "fsl_sd_disk.h"
-
+#include "uart.h"
 #include "play_audio.h"
-
-int analize_directory(char* currdir, char*nextdir, int string_len);
 
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
-
-
 
 /*******************************************************************************
  * Prototypes
@@ -32,6 +28,7 @@ int analize_directory(char* currdir, char*nextdir, int string_len);
  */
 char init_sd_card();
 static status_t sdcardWaitCardInsert(void);
+int analize_directory(char* currdir, char*nextdir, int string_len);
 
 /*******************************************************************************
  * Variables
@@ -81,6 +78,7 @@ static const sdmmchost_pwr_card_t s_sdCardPwrCtrl = {
  * Code
  ******************************************************************************/
 
+
 /*!
  * @brief Main function
  */
@@ -92,47 +90,125 @@ int main(void) {
 	} while(init_sd_card()!=0);
 
 	/***mandamos por UART todos los archivos****/
+
+	UART_Initialize(9600, 0);
+	do{
+	} while(inputEmpty()==true || retreiveInput()!='C');
+
+	while(!inputEmpty()){
+		retreiveInput();
+	}
+
 	char directory_string[1000];
 	strcpy(directory_string, "");
 	analize_directory(directory_string, "", 0);
 
+	const char eof = 0x1a;
+	UART_Send_Data(&eof, strlen(&eof));
+
     /*******AHORA ESA PUESTO ARBITRARIAMENTE ESTE ARCHIVO********/
 
 	char selected_song [100];
-	strcpy(selected_song, "/CARPETA1/CARPETA2/HIGHER~1.MP3");
+	strcpy(selected_song, "");
 
 	char end_of_song = false;
 	char play_new_song = true;
-	char pause = false;
+	char pause = true;
 	int eq_preset = NONE; //puede ser NONE, CLASSICAL, ROCK, URBAN
 	int volumen = 1;
 
-
-
-	int count = 0;
 	while(true){ //loop principal
 
 		//ACA HAY QUE CHEQUEAR UART Y UPDATEAR LOS FLAGS DE ARRIBA
+		static waiting_4_songpath = false;
+		static int newpath_idx = 0;
+		static char newpath [50];
 
-		if(pause == false || end_of_song == false){
-			if(play_new_song){
-				play_file(selected_song, play_new_song, volumen, eq_preset);
-				play_new_song = false;
+		if(inputEmpty()==false){
+			if(waiting_4_songpath == false){
+				int vol = 0;
+				switch (retreiveInput()) {
+					case 'V':
+						while(inputEmpty()==true);
+						vol+=10*(retreiveInput()-'0');
+						while(inputEmpty()==true);
+						vol+=retreiveInput()-'0';
+						volumen = 33-vol;
+						break;
+					case 'N':
+						eq_preset = NONE;
+						break;
+					case 'U':
+						eq_preset = URBAN;
+						break;
+					case 'O':
+						eq_preset = CLASSICAL;
+						break;
+					case 'K':
+						eq_preset = ROCK;
+						break;
+					case 'A':
+						pause = true;
+						break;
+					case 'R':
+						pause = false;
+						break;
+					case 'L':
+						waiting_4_songpath = true;
+						newpath_idx=0;
+						break;
+					case 'X':
+						end_of_song = false;
+						play_new_song = true;
+						pause = true;
+						eq_preset = NONE; //puede ser NONE, CLASSICAL, ROCK, URBAN
+						volumen = 1;
+						break;
+
+					default:
+						break;
+				}
 			}
 			else{
-				end_of_song = play_file(selected_song, play_new_song, volumen, eq_preset);
-				uint16_t* fft_pointer = get_fft_array();
-				/*//ESTO ES PARA TESTEAR EL CAMBIO DE CANCION, LA REINICIA AL TOQUE
-				if((count ++)==1000000){
+				while(inputEmpty()==true);
+				char new_char = retreiveInput();
+				if(new_char == 0x1A){
+					newpath[newpath_idx] = '\0';
+					strcpy(selected_song, newpath);
+					waiting_4_songpath = false;
 					play_new_song = true;
-					count = 0;
-				}*/
+					pause = false;
+				}
+				else{
+					newpath[newpath_idx] = new_char;
+					newpath_idx++;
+				}
+
 
 			}
-
 		}
+
+
+
+		//ACA PROCESAMOS LA CANCION
+
+		if(pause == false && end_of_song == false){
+			end_of_song = play_file(selected_song, play_new_song, volumen, eq_preset);
+			uint16_t* fft_pointer = get_fft_array();
+			if(play_new_song){
+				play_new_song = false;
+			}
+		}
+		else if (end_of_song != false){
+			pause = true;
+			end_of_song = false;
+			UART_Send_Data("E", strlen("E"));
+		}
+
 	}
 }
+
+
 
 int analize_directory(char* currdir, char*nextdir, int string_len){
 	int len = string_len;
@@ -146,10 +222,11 @@ int analize_directory(char* currdir, char*nextdir, int string_len){
 
 	DIR directory; /* Directory object */
 
+
 	//PRINTF("\r\nList the file in that directory...");
-	//PRINTF(currdir);
+	//////PRINTF(currdir);
 	if (f_opendir(&directory, currdir)) {
-		//PRINTF("Open directory failed.\r\n");
+		//////PRINTF("Open directory failed.\r\n");
 		return -1;
 	}
 
@@ -163,14 +240,13 @@ int analize_directory(char* currdir, char*nextdir, int string_len){
         if (res != FR_OK || strlen(files.fname) == 0) {
             break;
         }
-        if (strstr(files.fname, ".MP3")) {
-        	PRINTF("\r\n");
-        	PRINTF(currdir);
+        if (strstr(files.fname, ".MP3")){
+        	UART_Send_Data(currdir, strlen(currdir));
         	if(strcmp(currdir, "/")){
-        		PRINTF("/");
+        		UART_Send_Data("/", strlen("/"));
         	}
-            PRINTF(files.fname);
-            PRINTF("\r\n");
+        	UART_Send_Data(files.fname, strlen(files.fname));
+            UART_Send_Data("\n", strlen("\n"));
         }
         else if (!(strstr(files.fname, "SYSTEM"))){
         	analize_directory(currdir, files.fname, len + strlen(files.fname));
@@ -191,21 +267,21 @@ char init_sd_card(){
 		BOARD_InitDebugConsole();
 		SYSMPU_Enable(SYSMPU, false);
 
-		PRINTF("\r\nPlease insert a card into board.\r\n");
+		////PRINTF("\r\nPlease insert a card into board.\r\n");
 
 		if (sdcardWaitCardInsert() != kStatus_Success) {
 			return -1;
 		}
 
 		if (f_mount(&g_fileSystem, driverNumberBuffer, 0U)) {
-			PRINTF("Mount volume failed.\r\n");
+			////PRINTF("Mount volume failed.\r\n");
 			return -1;
 		}
 
 		#if (FF_FS_RPATH >= 2U)
 			error = f_chdrive((char const *)&driverNumberBuffer[0U]);
 			if (error) {
-				PRINTF("Change drive failed.\r\n");
+				////PRINTF("Change drive failed.\r\n");
 				return -1;
 			}
 		#endif
@@ -224,18 +300,18 @@ static status_t sdcardWaitCardInsert(void) {
 #endif
     /* SD host init function */
     if (SD_HostInit(&g_sd) != kStatus_Success) {
-        PRINTF("\r\nSD host init fail\r\n");
+        ////PRINTF("\r\nSD host init fail\r\n");
         return kStatus_Fail;
     }
     /* power off card */
     SD_PowerOffCard(g_sd.host.base, g_sd.usrParam.pwr);
     /* wait card insert */
     if (SD_WaitCardDetectStatus(SD_HOST_BASEADDR, &s_sdCardDetect, true) == kStatus_Success) {
-        PRINTF("\r\nCard inserted.\r\n");
+        ////PRINTF("\r\nCard inserted.\r\n");
         /* power on the card */
         SD_PowerOnCard(g_sd.host.base, g_sd.usrParam.pwr);
     } else {
-        PRINTF("\r\nCard detect fail.\r\n");
+        ////PRINTF("\r\nCard detect fail.\r\n");
         return kStatus_Fail;
     }
 

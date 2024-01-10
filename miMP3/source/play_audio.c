@@ -67,8 +67,10 @@ int play_file(char *mp3_fname, char first_call, int volumen, int equalizer) {
     }
     else{
 
+    	equalizer_init(equalizer);
+
     	if(first_call){
-    			equalizer_init(equalizer); // puede ser ROCK CLASSICAL URBAN o NONE
+    			 // puede ser ROCK CLASSICAL URBAN o NONE
     			if (strlen(mp3_fname) == 0) {
     			    	while (1);
     			    }
@@ -121,20 +123,10 @@ int play_file(char *mp3_fname, char first_call, int volumen, int equalizer) {
     					case ERR_MP3_INDATA_UNDERFLOW:
     						outOfData = 1;
     						break;
-    					case ERR_MP3_MAINDATA_UNDERFLOW:
-    						/* do nothing - next call to decode will provide more mainData */
-    						break;
     					case ERR_MP3_NULL_POINTER:
     						bytes_left -= 1;
     						read_ptr += 1;
-    					case ERR_MP3_FREE_BITRATE_SYNC:
-    						break;
-    					case ERR_MP3_INVALID_FRAMEHEADER:
-    						break;
-    					case ERR_MP3_INVALID_HUFFCODES:
-    					    break;
     					default:
-    						outOfData = 1;
     						break;
     				}
     			} else {
