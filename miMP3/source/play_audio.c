@@ -38,6 +38,42 @@ int16_t audio_buff[OUTBUFLEN] = {0};
 float audio_buff_float[OUTBUFLEN] = {0};
 uint16_t fft_array[FFT_BINS] = {0.0};
 
+
+const float volumes[32] = {
+		1.0 ,
+		0.8912509381337456 ,
+		0.7943282347242815 ,
+		0.7079457843841379 ,
+		0.6309573444801932 ,
+		0.5623413251903491 ,
+		0.5011872336272722 ,
+		0.44668359215096315 ,
+		0.3981071705534972 ,
+		0.35481338923357547 ,
+		0.31622776601683794 ,
+		0.28183829312644537 ,
+		0.251188643150958 ,
+		0.22387211385683395 ,
+		0.19952623149688797 ,
+		0.1778279410038923 ,
+		0.15848931924611134 ,
+		0.14125375446227545 ,
+		0.12589254117941673 ,
+		0.11220184543019636 ,
+		0.1 ,
+		0.08912509381337455 ,
+		0.07943282347242814 ,
+		0.0707945784384138 ,
+		0.06309573444801933 ,
+		0.05623413251903491 ,
+		0.05011872336272722 ,
+		0.0446683592150963 ,
+		0.039810717055349734 ,
+		0.03548133892335755 ,
+		0.03162277660168379 ,
+		0.028183829312644536 ,
+		};
+
 //FUNCIONES EXTERNAS
 void play_file_output_init(){
 	dac_out_init();
@@ -133,13 +169,13 @@ int play_file(char *mp3_fname, char first_call, int volumen, int equalizer) {
     				MP3GetLastFrameInfo(hMP3Decoder, &mp3FrameInfo);
     				if (mp3FrameInfo.nChans == 2) {
     					for (int i = 0; i < mp3FrameInfo.outputSamps; i += 2) {
-    						uint16_t aux = (uint16_t)(((samples[i] + samples[i + 1]) >> 5)/volumen + 2047);
+    						uint16_t aux = (uint16_t)(((samples[i] + samples[i + 1]) >> 5)*volumes[volumen] + 2047);
     						int index = t * 1152 + i / 2;
     						audio_buff[index] = aux;
     					}
     				} else if (mp3FrameInfo.nChans == 1) {
     					for (int i = 0; i < mp3FrameInfo.outputSamps; i += 1) {
-    						uint16_t aux = (uint16_t)(((samples[i] + samples[i + 1]) >> 5)/volumen + 2047);
+    						uint16_t aux = (uint16_t)(((samples[i] + samples[i + 1]) >> 5)*volumes[volumen] + 2047);
     						int index = t * 1152 + i;
     						audio_buff[index] = aux;
     					}
