@@ -1,6 +1,11 @@
 {
     "files.associations": {
         "fsl_sd_disk.h": "c",
-        "fsl_sysmpu.h": "c"
+        "fsl_sysmpu.h": "c",
+        "fsl_common_arm.h": "c",
+        "fsl_edma.h": "c",
+        "fsl_common.h": "c",
+        "hardware.h": "c",
+        "dma_matrix.h": "c"
     }
 }

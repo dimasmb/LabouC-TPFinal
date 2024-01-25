@@ -24,7 +24,7 @@ void hw_Init (void)
 	SIM->SOPT1 |= SIM_SOPT1_OSC32KSEL(0x03); /* Set 32 kHz clock source (ERCLK32K) */
 	SIM->SOPT2 = SIM_SOPT2_PLLFLLSEL_MASK; /* Set high frequency clock source (PLL) */
 	// Ports Enable
-	//SIM->SCGC5 |= SIM_SCGC5_PORTA_MASK | SIM_SCGC5_PORTB_MASK | SIM_SCGC5_PORTC_MASK | SIM_SCGC5_PORTD_MASK | SIM_SCGC5_PORTE_MASK; /* All PORTs enabled */
+	SIM->SCGC5 |= SIM_SCGC5_PORTA_MASK | SIM_SCGC5_PORTB_MASK | SIM_SCGC5_PORTC_MASK | SIM_SCGC5_PORTD_MASK | SIM_SCGC5_PORTE_MASK; /* All PORTs enabled */
 
 
 	MCG->SC = MCG_SC_FCRDIV(0x02); /* Fast clock internal reference divider */
