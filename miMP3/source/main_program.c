@@ -14,6 +14,9 @@
 #include "fsl_sd_disk.h"
 #include "uart.h"
 #include "play_audio.h"
+#include "gpio.h"
+
+#include "dma_matrix.h"
 
 /*******************************************************************************
  * Definitions
@@ -84,9 +87,12 @@ static const sdmmchost_pwr_card_t s_sdCardPwrCtrl = {
 int main(void) {
 
 	play_file_output_init();
+	gpioMode(PORTNUM2PIN(PB,0),OUTPUT);
 
 	do{
 	} while(init_sd_card()!=0);
+
+	DMAmatrixInit();
 
 	/***mandamos por UART todos los archivos****/
 
@@ -198,6 +204,17 @@ int main(void) {
 		if(pause == false && end_of_song == false){
 			end_of_song = play_file(selected_song, play_new_song, volumen, eq_preset);
 			uint16_t* fft_pointer = get_fft_array();
+
+			int p = 0;
+
+			for(p=0; p<8; p++){
+				float level = (float)(*(fft_pointer+p));
+				level /= 1500.0;
+				level *= 8.0;
+				Matrix_ColByLevel(p,(uint8_t)level,p==7);
+			}
+
+
 			if(play_new_song){
 				play_new_song = false;
 			}
@@ -207,6 +224,10 @@ int main(void) {
 			end_of_song = false;
 			UART_Send_Data("E", strlen("E"));
 		}
+        else if(pause==true){
+        	Matrix_TurnOff();
+        }
+
 
 	}
 }

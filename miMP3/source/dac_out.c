@@ -14,7 +14,7 @@
  ******************************************************************************/
 #define my_DMA         DMA0
 #define my_DMAMUX 	   DMAMUX0
-#define FILLBUF_CH 	   1
+#define FILLBUF_CH 	   2
 #define PINGPONG_CH	   0
 
 #define TCD_QUEUE_SIZE 2U

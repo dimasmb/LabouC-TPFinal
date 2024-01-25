@@ -1,34 +1,21 @@
-/***************************************************************************//**
-  @file     dma.h
-  @brief    Driver for Dynamic Memory Access
-  @author   TEAM OREO
- ******************************************************************************/
+
 #ifndef DMA_MATRIX_H_
 #define DMA_MATRIX_H_
 
-/*******************************************************************************
- * INCLUDE HEADER FILES
- ******************************************************************************/
-
 #include <stdbool.h>
 
-#define ONE2PWMDUTTY 10
-#define ZERO2PWMDUTTY 18
+#define ONE2PWMDUTTY 28
+#define ZERO2PWMDUTTY 50
 #define CANTLEDS 64
 #define BITSPERLED 24
 #define CANTBITS BITSPERLED * CANTLEDS // 64 led * 24bits/led
 #define SIZEMAINTABLE CANTBITS
 #define MIN_ATT 1
 #define MAX_ATT 255
-/*******************************************************************************
- * ENUMERATIONS AND STRUCTURES AND TYPEDEFS
- ******************************************************************************/
+
 typedef void (*dma_callback_t)(void);
 
 
-/*******************************************************************************
- * FUNCTION PROTOTYPES WITH GLOBAL SCOPE
- ******************************************************************************/
 
 void DMAmatrixInit();
 void DMAChangeAllMatrix(uint8_t newMatrix[CANTLEDS][3],uint8_t attenuation);
