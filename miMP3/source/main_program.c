@@ -111,6 +111,14 @@ int main(void) {
 	const char eof = 0x1a;
 	UART_Send_Data(&eof, strlen(&eof));
 
+	strcpy(directory_string, "");
+	analize_directory(directory_string, "", 0);
+	UART_Send_Data(&eof, strlen(&eof));
+
+	strcpy(directory_string, "");
+	analize_directory(directory_string, "", 0);
+	UART_Send_Data(&eof, strlen(&eof));
+
     /*******AHORA ESA PUESTO ARBITRARIAMENTE ESTE ARCHIVO********/
 
 	char selected_song [100];
@@ -153,10 +161,10 @@ int main(void) {
 						eq_preset = ROCK;
 						break;
 					case 'A':
-						pause = true;
+						pause =  !pause; //esto te lo pausa
 						break;
 					case 'R':
-						pause = false;
+						pause = !pause;
 						break;
 					case 'L':
 						waiting_4_songpath = true;
@@ -173,13 +181,19 @@ int main(void) {
 						strcpy(directory_string, "");
 						analize_directory(directory_string, "", 0);
 						UART_Send_Data(&eof, strlen(&eof));
+						strcpy(directory_string, "");
+						analize_directory(directory_string, "", 0);
+						UART_Send_Data(&eof, strlen(&eof));
+						strcpy(directory_string, "");
+						analize_directory(directory_string, "", 0);
+						UART_Send_Data(&eof, strlen(&eof));
 						break;
 					default:
 						break;
 				}
 			}
 			else{
-				while(inputEmpty()==true);
+				//while(inputEmpty()==true);
 				char new_char = retreiveInput();
 				if(new_char == 0x1A){
 					newpath[newpath_idx] = '\0';
@@ -209,6 +223,7 @@ int main(void) {
 
 			for(p=0; p<8; p++){
 				float level = (float)(*(fft_pointer+p));
+				level = (level+1.1);
 				level /= 1500.0;
 				level *= 8.0;
 				Matrix_ColByLevel(p,(uint8_t)level,p==7);

@@ -315,7 +315,7 @@
 					</fileInfo>
 					<fileInfo id="com.crt.advproject.config.exe.debug.1313927357.78565479" name="play_audio.c" rcbsApplicability="disable" resourcePath="source/play_audio.c" toolsToInvoke="com.crt.advproject.gcc.exe.debug.1703754753.1119757296">
 						<tool command="arm-none-eabi-gcc" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" id="com.crt.advproject.gcc.exe.debug.1703754753.1119757296" name="MCU C Compiler" superClass="com.crt.advproject.gcc.exe.debug.1703754753">
-							<option id="com.crt.advproject.gcc.exe.debug.option.optimization.level.1937689496" name="Optimization Level" superClass="com.crt.advproject.gcc.exe.debug.option.optimization.level" useByScannerDiscovery="false" value="gnu.c.optimization.level.optimize" valueType="enumerated"/>
+							<option id="com.crt.advproject.gcc.exe.debug.option.optimization.level.1937689496" name="Optimization Level" superClass="com.crt.advproject.gcc.exe.debug.option.optimization.level" useByScannerDiscovery="false" value="gnu.c.optimization.level.none" valueType="enumerated"/>
 							<inputType id="com.crt.advproject.compiler.input.443665622" superClass="com.crt.advproject.compiler.input"/>
 						</tool>
 						<tool announcement="Invoking: Resource Custom Build Step" command="" customBuildStep="true" id="org.eclipse.cdt.managedbuilder.ui.rcbs.941258036" name="Resource Custom Build Step">

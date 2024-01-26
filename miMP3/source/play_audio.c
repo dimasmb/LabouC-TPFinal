@@ -36,6 +36,7 @@ char *read_ptr;
 int16_t pcm_buff[2304];
 int16_t audio_buff[OUTBUFLEN] = {0};
 float audio_buff_float[OUTBUFLEN] = {0};
+float audio_buff_float2[OUTBUFLEN] = {0};
 uint16_t fft_array[FFT_BINS] = {0.0};
 
 
@@ -184,11 +185,32 @@ int play_file(char *mp3_fname, char first_call, int volumen, int equalizer) {
     		}
 
     		if (!outOfData) {
-    			int status_buf = 0;
 
-    			intToFloat(audio_buff, audio_buff_float, 2304*2);
-    			equalize(audio_buff_float, audio_buff_float);
-    			floatToInt(audio_buff_float, audio_buff, 2304*2);
+    			//uint16_t last_vals[50];
+
+    			if (equalizer!=NONE){
+
+    				static uint16_t ultval = 2047;
+
+					intToFloat(audio_buff, audio_buff_float, 2304*2);
+					equalize(audio_buff_float, audio_buff_float2);
+					floatToInt(audio_buff_float2, audio_buff, 2304*2);
+
+
+					int samples = 50;
+					uint16_t pend = (audio_buff[samples] - ultval)/(samples+1);
+
+					for (int p = 1; p<(samples+1);p++){
+						audio_buff[p-1] = p*pend + ultval;
+					}
+
+					ultval = audio_buff[OUTBUFLEN-1];
+
+    			}
+    			else{
+    				intToFloat(audio_buff, audio_buff_float, 2304*2);
+    			}
+
 
     			last_segment_was_loaded = fill_dma_buffer(audio_buff);
 
