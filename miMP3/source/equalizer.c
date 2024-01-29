@@ -222,20 +222,20 @@ void equalizer_init(int preset){
 	int gainDB[5] = {0, 0, 0, 0, 0};
 
 	if(preset == ROCK){
-		gainDB[1] = -1;
-		gainDB[2] = -2;
 		gainDB[3] = -1;
+		gainDB[4] = -1;
+
 	}
 	else if (preset== CLASSICAL) {
-		gainDB[1] = 0;
-		gainDB[2] = 1;
+
 		gainDB[3] = 1;
-		gainDB[4] = 0;
+		gainDB[4] = 1;
 	}
 	else if (preset== URBAN) {
-		gainDB[2] = -1;
+
 		gainDB[3] = -2;
 		gainDB[4] = -3;
+		gainDB[5] = -3;
 	}
 	else if (preset == NONE){
 	}
