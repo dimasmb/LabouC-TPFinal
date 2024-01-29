@@ -1,6 +1,6 @@
 
-#ifndef SOURCES_FTM_H_
-#define SOURCES_FTM_H_
+#ifndef FTM_H_
+#define FTM_H_
 
 #include "hardware.h"
 

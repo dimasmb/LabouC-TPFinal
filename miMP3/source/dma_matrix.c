@@ -1,20 +1,9 @@
-/***************************************************************************//**
-  @file     dma.h
-  @brief    Driver for Dynamic Memory Access
-  @author   TEAM OREO
- ******************************************************************************/
 
-/*******************************************************************************
- * INCLUDE HEADER FILES
- ******************************************************************************/
 #include "hardware.h"
 #include <stddef.h>
 #include "dma_matrix.h"
 #include "PWM.h"
 
-/*******************************************************************************
- * CONSTANT AND MACRO DEFINITIONS USING #DEFINE
- ******************************************************************************/
 #define RED  {0,255,0}
 #define BLUE {0,0,255}
 #define GREEN {255,0,0}
@@ -34,7 +23,7 @@ uint8_t fullRow[8][3] = {GREEN,GREEN,GREEN,YELLOW,YELLOW,ORANGE,RED,RED};
 uint8_t newFullRow[8][3];
 uint8_t noColorRow[3]=NO_COLOR;
 
-/* Structure with the TCD fields. */
+/* Structure: TCD. */
 typedef struct
 {
 	uint32_t SADDR;
@@ -71,7 +60,7 @@ typedef struct
 static void DMARefreshMatrix(void);
 static TCD_t mainTCD;
 static bool change = true;
-static uint16_t mainMatrix[2*SIZEMAINTABLE]; //Aca ya estan los bits uno por uno en PWM Format
+static uint16_t mainMatrix[2*SIZEMAINTABLE];
 /*******************************************************************************
  *******************************************************************************
                         GLOBAL FUNCTION DEFINITIONS
@@ -89,7 +78,7 @@ void DMAmatrixInit()
 		NVIC_EnableIRQ(DMA1_IRQn);
 		pwmInit();
 		/*************************************************/
-		mainTCD.SADDR = (uint32_t)((uint16_t*)mainMatrix + 1); //El +1 es porque si no, el primer push lo hace de 9 bits xd
+		mainTCD.SADDR = (uint32_t)((uint16_t*)mainMatrix + 1);
 		mainTCD.DADDR = (uint32_t)(&(FTM2->CONTROLS[0].CnV));
 		mainTCD.SOFF = SOURCE_OFFSET;
 		mainTCD.DOFF = DESTINATION_OFFSET;
