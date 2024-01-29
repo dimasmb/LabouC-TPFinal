@@ -84,6 +84,7 @@ void play_file_output_init(){
 int play_file(char *mp3_fname, char first_call, int volin, int equalizer) {
 
 	int volumen = volin;
+	if(volumen==0) volumen++;
 	static FIL fil;    /* File object */
 	static FRESULT fr; /* FatFs return code */
 	static uint32_t time, prev_seconds, minutes;
