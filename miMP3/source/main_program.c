@@ -146,7 +146,7 @@ int main(void) {
 						vol+=10*(retreiveInput()-'0');
 						while(inputEmpty()==true);
 						vol+=retreiveInput()-'0';
-						volumen = 33-vol;
+						volumen = 32-vol;
 						break;
 					case 'N':
 						eq_preset = NONE;

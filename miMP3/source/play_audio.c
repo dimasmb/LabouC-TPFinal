@@ -81,8 +81,9 @@ void play_file_output_init(){
 };
 
 
-int play_file(char *mp3_fname, char first_call, int volumen, int equalizer) {
+int play_file(char *mp3_fname, char first_call, int volin, int equalizer) {
 
+	int volumen = volin;
 	static FIL fil;    /* File object */
 	static FRESULT fr; /* FatFs return code */
 	static uint32_t time, prev_seconds, minutes;
@@ -170,13 +171,13 @@ int play_file(char *mp3_fname, char first_call, int volumen, int equalizer) {
     				MP3GetLastFrameInfo(hMP3Decoder, &mp3FrameInfo);
     				if (mp3FrameInfo.nChans == 2) {
     					for (int i = 0; i < mp3FrameInfo.outputSamps; i += 2) {
-    						uint16_t aux = (uint16_t)(((samples[i] + samples[i + 1]) >> 5)*volumes[volumen] + 2047);
+    						uint16_t aux = (uint16_t)(((samples[i] + samples[i + 1]) >> 5)*volumes[volumen-1] + 2047);
     						int index = t * 1152 + i / 2;
     						audio_buff[index] = aux;
     					}
     				} else if (mp3FrameInfo.nChans == 1) {
     					for (int i = 0; i < mp3FrameInfo.outputSamps; i += 1) {
-    						uint16_t aux = (uint16_t)(((samples[i] + samples[i + 1]) >> 5)*volumes[volumen] + 2047);
+    						uint16_t aux = (uint16_t)(((samples[i] + samples[i + 1]) >> 5)*volumes[volumen-1] + 2047);
     						int index = t * 1152 + i;
     						audio_buff[index] = aux;
     					}
