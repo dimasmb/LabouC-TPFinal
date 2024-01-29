@@ -81,12 +81,9 @@ typedef struct{
 
 typedef FTM_Type *FTM_t;
 typedef uint16_t FTMData_t;
-typedef uint32_t FTMChannel_t; /* FTM0/FTM3: Channel 1-8; FTM1/FTM2: Channel 1-2 */
+typedef uint32_t FTMChannel_t;
 
 
-/*******************************************************************************
- * FUNCTION PROTOTYPES WITH GLOBAL SCOPE
- ******************************************************************************/
 void 		FTM_Init 						 (void);
 
 void 		FTM_Start(ftm_id_t id, ftm_config_t configurations , ftm_callback_t callback);

@@ -4,38 +4,7 @@
 static ftm_callback_t ftmCallbacks[FTM_CANT];
 FTM_Type* FTMptr[] = { FTM0, FTM1, FTM2, FTM3 };
 
-__ISR__ FTM0_IRQHandler(void)
-{
-	FTM_ClearOverflowFlag (FTM0);
-	(*ftmCallbacks[0])();
-}
 
-__ISR__ FTM1_IRQHandler(void)
-{
-	FTM_ClearOverflowFlag (FTM1);
-	(*ftmCallbacks[1])();
-}
-
-__ISR__ FTM2_IRQHandler(void)
-{
-	//FTM_ClearInterruptFlag(FTM2, FTM_CH_0);
-	FTM_ClearOverflowFlag (FTM2);
-	(*ftmCallbacks[2])();
-}
-
-__ISR__ FTM3_IRQHandler(void)
-{
-#ifdef MEASURE_IRQ_TIME
-	gpioWrite(MEASURE_IRQ_FTM3,HIGH);
-#endif
-
-	FTM_ClearInterruptFlag(FTM3, FTM_CH_5);
-	(*ftmCallbacks[3])();
-
-#ifdef MEASURE_IRQ_TIME
-	gpioWrite(MEASURE_IRQ_FTM3,LOW);
-#endif
-}
 
 void FTM_Init (void)
 {
@@ -76,8 +45,6 @@ void FTM_Start(ftm_id_t id, ftm_config_t configs , ftm_callback_t ftmCallback)
 		FTM_SetWorkingMode(FTMptr[id],configs.channel,configs.mode);
 
 		FTM_SetInterruptMode(FTMptr[id], configs.channel, true);
-
-		//PTC9 as Input Compare (FTM3-CHANNEL5)
 		PORTC->PCR[9] = PORT_PCR_DSE(1) | PORT_PCR_MUX(0b011) | PORT_PCR_IRQC(0);
 	}
 	break;
@@ -87,18 +54,15 @@ void FTM_Start(ftm_id_t id, ftm_config_t configs , ftm_callback_t ftmCallback)
 		FTM_SetOutputCompareEffect(FTMptr[id],configs.channel, configs.effect);
 		FTM_SetInterruptMode(FTMptr[id],configs.channel, true);
 		FTM_SetWorkingMode(FTMptr[id],configs.channel,configs.mode);
-
-		//Set PTC1 as Output Compare (FTM0-CHANNEL0)
 		PORTC->PCR[1] = PORT_PCR_DSE(1) | PORT_PCR_MUX(0b100) | PORT_PCR_IRQC(0);
 	}
 	break;
 
 	case FTM_mOverflow:
 
-	{	//Enable Timer advanced modes (FTMEN=1)
+	{
 		FTMptr[id]->MODE=(FTMptr[id]->MODE & ~FTM_MODE_FTMEN_MASK) | FTM_MODE_FTMEN(1);
 
-		///Enable Timer Overflow interrupt
 		FTMptr[id]->SC = (FTM0->SC & ~FTM_SC_TOIE_MASK) | FTM_SC_TOIE(1);
 	}
 	break;
@@ -109,49 +73,43 @@ void FTM_Start(ftm_id_t id, ftm_config_t configs , ftm_callback_t ftmCallback)
 		{
 			case 0:
 			{
-				//FTM0 --> ch0 PTC1
-				PORTC->PCR[1] = 0; //clear
+				PORTC->PCR[1] = 0;
 				PORTC->PCR[1] |= PORT_PCR_DSE(1) | PORT_PCR_MUX(0b011) | PORT_PCR_IRQC(0);
 			}break;
 			case 1:
 			{
-			//No disponible en kinetis
+
 			}break;
 			case 2:
 			{
-			//FTM2 --> ch0 PTB18
-				PORTB->PCR[18] = 0; //clear
+
+				PORTB->PCR[18] = 0;
 				PORTB->PCR[18] |= PORT_PCR_DSE(1) | PORT_PCR_MUX(0b011) | PORT_PCR_IRQC(0) | PORT_PCR_PE(1) |PORT_PCR_PS(0) ;
 			}break;
 			case 3:
 			{
-			//FTM3 --> ch0 PTD0
-			//Set PTD0 as PWM
-				PORTD->PCR[0] = 0; //clear
+
+				PORTD->PCR[0] = 0;
 				PORTD->PCR[0] |= PORT_PCR_DSE(1) | PORT_PCR_MUX(0b100) | PORT_PCR_IRQC(0);
 			}break;
 		}
-		//configs
-		//Interrupt mode
+
+
 		FTM_SetInterruptMode(FTMptr[id],configs.channel, true);
-		//FTM_SetOverflowMode(FTMptr[id], true);
 
 		FTM_SetWorkingMode(FTMptr[id],configs.channel,configs.mode);
 		FTM_SetPulseWidthModulationLogic(FTMptr[id],configs.channel,configs.logic);
 
 		FTM_SetCounter(FTMptr[id],configs.channel,configs.duty);
 
-		//enable DMA
 		FTM_SetDMA(FTMptr[id], configs.channel, true);
 
 	}
 		break;
 	}
-	//FTM_StartClock(FTMptr[id]);
 }
 
 
-// Setters
 
 void FTM_SetPrescaler (FTM_t ftm, FTM_Prescal_t data)
 {
@@ -268,4 +226,36 @@ bool FTM_IsInterruptPending (FTM_t ftm, FTMChannel_t channel)
 void FTM_ClearInterruptFlag (FTM_t ftm, FTMChannel_t channel)
 {
 	ftm->CONTROLS[channel].CnSC &= ~FTM_CnSC_CHF_MASK;
+}
+
+__ISR__ FTM0_IRQHandler(void)
+{
+	FTM_ClearOverflowFlag (FTM0);
+	(*ftmCallbacks[0])();
+}
+
+__ISR__ FTM1_IRQHandler(void)
+{
+	FTM_ClearOverflowFlag (FTM1);
+	(*ftmCallbacks[1])();
+}
+
+__ISR__ FTM2_IRQHandler(void)
+{
+	FTM_ClearOverflowFlag (FTM2);
+	(*ftmCallbacks[2])();
+}
+
+__ISR__ FTM3_IRQHandler(void)
+{
+#ifdef MEASURE_IRQ_TIME
+	gpioWrite(MEASURE_IRQ_FTM3,HIGH);
+#endif
+
+	FTM_ClearInterruptFlag(FTM3, FTM_CH_5);
+	(*ftmCallbacks[3])();
+
+#ifdef MEASURE_IRQ_TIME
+	gpioWrite(MEASURE_IRQ_FTM3,LOW);
+#endif
 }

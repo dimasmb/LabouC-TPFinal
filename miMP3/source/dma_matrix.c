@@ -23,7 +23,7 @@ uint8_t fullRow[8][3] = {GREEN,GREEN,GREEN,YELLOW,YELLOW,ORANGE,RED,RED};
 uint8_t newFullRow[8][3];
 uint8_t noColorRow[3]=NO_COLOR;
 
-/* Structure: TCD. */
+
 typedef struct
 {
 	uint32_t SADDR;
@@ -52,20 +52,12 @@ typedef struct
 	};
 }TCD_t;
 
-/*******************************************************************************/
-
-/*******************************************************************************
- * GLOBAL VARIABLES
- ******************************************************************************/
 static void DMARefreshMatrix(void);
 static TCD_t mainTCD;
 static bool change = true;
 static uint16_t mainMatrix[2*SIZEMAINTABLE];
-/*******************************************************************************
- *******************************************************************************
-                        GLOBAL FUNCTION DEFINITIONS
- *******************************************************************************
- ******************************************************************************/
+
+
 void DMAmatrixInit()
 {
 
@@ -73,11 +65,9 @@ void DMAmatrixInit()
 		SIM->SCGC6 |= SIM_SCGC6_DMAMUX_MASK;
 
 		DMAMUX->CHCFG[1] |= DMAMUX_CHCFG_ENBL_MASK |DMAMUX_CHCFG_SOURCE(30); // El 30 ftm2
-		/*****************************************/
 		NVIC_ClearPendingIRQ(DMA1_IRQn);
 		NVIC_EnableIRQ(DMA1_IRQn);
 		pwmInit();
-		/*************************************************/
 		mainTCD.SADDR = (uint32_t)((uint16_t*)mainMatrix + 1);
 		mainTCD.DADDR = (uint32_t)(&(FTM2->CONTROLS[0].CnV));
 		mainTCD.SOFF = SOURCE_OFFSET;
@@ -86,7 +76,6 @@ void DMAmatrixInit()
 		mainTCD.NBYTES_MLNO = MINORLOOP;
 		mainTCD.CITER_ELINKNO = DMA_CITER_ELINKNO_CITER(SIZEMAINTABLE);
 		mainTCD.BITER_ELINKNO = DMA_BITER_ELINKNO_BITER(SIZEMAINTABLE);
-		/*************************************************/
 		for(int i =0; i<2*SIZEMAINTABLE; i++)
 		{
 			mainMatrix[i] = ZERO2PWMDUTTY;
@@ -245,27 +234,17 @@ static void DMARefreshMatrix(void)
 		DMA0->TCD[1].CITER_ELINKNO = mainTCD.CITER_ELINKNO;
 		DMA0->TCD[1].BITER_ELINKNO = mainTCD.BITER_ELINKNO;
 
-		DMA0->TCD[1].SLAST = 0;//-config.source_len;
+		DMA0->TCD[1].SLAST = 0;
 
 		DMA0->TCD[1].DLAST_SGA = 0;
 
-		//DMA0->TCD[channel].CSR |= DMA_CSR_INTMAJOR_MASK;
-		//dma_callback[channel] = config.dma_callback;
 		DMA0->ERQ |= DMA_ERQ_ERQ1_MASK;
-		//DMA0->SERQ = DMA_SERQ_SERQ(0);
 		DMA0->TCD[1].CSR = DMA_CSR_INTMAJOR_MASK;
-		//DMA0->TCD[channel].CSR |= DMA_CSR_START_MASK;
 		FTM_StartClock(FTM2);
-//		DMA0->TCD[1].CSR |= DMA_CSR_START_MASK;
+
 	}
 }
 
-/**
- * @brief Modify a column in the led Matrix.
- * @param column Number of the column you change (0-7)
- * @param level Level of the maximum led (1-8)
- * @param refresh True if you want to refresh matrix
- */
 void Matrix_ColByLevel(uint8_t column, uint8_t level, bool refresh){
 
 	int i=0;

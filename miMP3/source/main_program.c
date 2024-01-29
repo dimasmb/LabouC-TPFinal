@@ -1,6 +1,5 @@
 #include "MK64F12.h"
 
-
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -8,7 +7,7 @@
 #include "board.h"
 #include "diskio.h"
 #include "ff.h"
-//#include "fsl_debug_console.h"
+
 #include "fsl_gpio.h"
 #include "fsl_sd.h"
 #include "fsl_sd_disk.h"
@@ -18,39 +17,18 @@
 
 #include "dma_matrix.h"
 
-/*******************************************************************************
- * Definitions
- ******************************************************************************/
-
-/*******************************************************************************
- * Prototypes
- ******************************************************************************/
-/*!
- * @brief wait card insert function.
- */
 char init_sd_card();
 static status_t sdcardWaitCardInsert(void);
 int analize_directory(char* currdir, char*nextdir, int string_len);
 
-/*******************************************************************************
- * Variables
- ******************************************************************************/
-static FATFS g_fileSystem; /* File system object */
-static FIL g_fileObject;   /* File object */
+static FATFS g_fileSystem;
+static FIL g_fileObject;
 
 volatile uint32_t delay1 = 1000;
 volatile uint32_t core_clock;
 
 volatile uint8_t next, prev, replay, mute, ffd, reset, play, volume = 5;
 
-/* @brief decription about the read/write buffer
- * The size of the read/write buffer should be a multiple of 512, since SDHC/SDXC card uses 512-byte fixed
- * block length and this driver example is enabled with a SDHC/SDXC card.If you are using a SDSC card, you
- * can define the block length by yourself if the card supports partial access.
- * The address of the read/write buffer should align to the specific DMA data buffer address align value if
- * DMA transfer is used, otherwise the buffer address is not important.
- * At the same time buffer address/size should be aligned to the cache line size if cache is supported.
- */
 
 #define BUFFER_SIZE (100U)
 
@@ -76,14 +54,8 @@ static const sdmmchost_pwr_card_t s_sdCardPwrCtrl = {
     .powerOffDelay_ms = 0U,
 };
 #endif
-/*******************************************************************************
- * Code
- ******************************************************************************/
 
 
-/*!
- * @brief Main function
- */
 int main(void) {
 
 	play_file_output_init();
@@ -118,8 +90,6 @@ int main(void) {
 	strcpy(directory_string, "");
 	analize_directory(directory_string, "", 0);
 	UART_Send_Data(&eof, strlen(&eof));
-
-    /*******AHORA ESA PUESTO ARBITRARIAMENTE ESTE ARCHIVO********/
 
 	char selected_song [100];
 	strcpy(selected_song, "");
@@ -193,7 +163,6 @@ int main(void) {
 				}
 			}
 			else{
-				//while(inputEmpty()==true);
 				char new_char = retreiveInput();
 				if(new_char == 0x1A){
 					newpath[newpath_idx] = '\0';
@@ -211,8 +180,6 @@ int main(void) {
 			}
 		}
 
-
-
 		//ACA PROCESAMOS LA CANCION
 
 		if(pause == false && end_of_song == false){
@@ -228,8 +195,6 @@ int main(void) {
 				level *= 8.0;
 				Matrix_ColByLevel(p,(uint8_t)level,p==7);
 			}
-
-
 			if(play_new_song){
 				play_new_song = false;
 			}
@@ -247,8 +212,6 @@ int main(void) {
 	}
 }
 
-
-
 int analize_directory(char* currdir, char*nextdir, int string_len){
 	int len = string_len;
 	if(strcmp(currdir, "/")){
@@ -256,16 +219,11 @@ int analize_directory(char* currdir, char*nextdir, int string_len){
 	}
 	strcat(currdir, nextdir);
 
-
 	/*****Abrimos el directorio raíz*****/
 
-	DIR directory; /* Directory object */
+	DIR directory;
 
-
-	//PRINTF("\r\nList the file in that directory...");
-	//////PRINTF(currdir);
 	if (f_opendir(&directory, currdir)) {
-		//////PRINTF("Open directory failed.\r\n");
 		return -1;
 	}
 
@@ -306,14 +264,11 @@ char init_sd_card(){
 		BOARD_InitDebugConsole();
 		SYSMPU_Enable(SYSMPU, false);
 
-		////PRINTF("\r\nPlease insert a card into board.\r\n");
-
 		if (sdcardWaitCardInsert() != kStatus_Success) {
 			return -1;
 		}
 
 		if (f_mount(&g_fileSystem, driverNumberBuffer, 0U)) {
-			////PRINTF("Mount volume failed.\r\n");
 			return -1;
 		}
 
@@ -329,28 +284,19 @@ char init_sd_card(){
 	}
 
 static status_t sdcardWaitCardInsert(void) {
-    /* Save host information. */
     g_sd.host.base = SD_HOST_BASEADDR;
     g_sd.host.sourceClock_Hz = SD_HOST_CLK_FREQ;
-    /* card detect type */
     g_sd.usrParam.cd = &s_sdCardDetect;
 #if defined DEMO_SDCARD_POWER_CTRL_FUNCTION_EXIST
     g_sd.usrParam.pwr = &s_sdCardPwrCtrl;
 #endif
-    /* SD host init function */
     if (SD_HostInit(&g_sd) != kStatus_Success) {
-        ////PRINTF("\r\nSD host init fail\r\n");
         return kStatus_Fail;
     }
-    /* power off card */
     SD_PowerOffCard(g_sd.host.base, g_sd.usrParam.pwr);
-    /* wait card insert */
     if (SD_WaitCardDetectStatus(SD_HOST_BASEADDR, &s_sdCardDetect, true) == kStatus_Success) {
-        ////PRINTF("\r\nCard inserted.\r\n");
-        /* power on the card */
         SD_PowerOnCard(g_sd.host.base, g_sd.usrParam.pwr);
     } else {
-        ////PRINTF("\r\nCard detect fail.\r\n");
         return kStatus_Fail;
     }
 

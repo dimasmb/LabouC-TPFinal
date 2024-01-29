@@ -105,7 +105,6 @@ void init_dma2(){
     EDMA_TcdDisableInterrupts(&tcdMemoryPoolPtr[1], kEDMA_HalfInterruptEnable);
     EDMA_TcdEnableInterrupts(&tcdMemoryPoolPtr[1], kEDMA_MajorInterruptEnable);
 
-
     intallTCD(my_DMA, PINGPONG_CH, tcdMemoryPoolPtr);
     EDMA_StartTransfer(&g_EDMA_Handle);
     DMAMUX_EnablePeriodTrigger(my_DMAMUX, PINGPONG_CH);
@@ -165,7 +164,6 @@ static void intallTCD(DMA_Type *base, uint32_t channel, edma_tcd_t *tcd)
     assert(tcd != NULL);
     assert(((uint32_t)tcd & 0x1FU) == 0);
 
-    /* Push tcd into hardware TCD register */
     base->TCD[channel].SADDR = tcd->SADDR;
     base->TCD[channel].SOFF = tcd->SOFF;
     base->TCD[channel].ATTR = tcd->ATTR;
@@ -175,7 +173,7 @@ static void intallTCD(DMA_Type *base, uint32_t channel, edma_tcd_t *tcd)
     base->TCD[channel].DOFF = tcd->DOFF;
     base->TCD[channel].CITER_ELINKNO = tcd->CITER;
     base->TCD[channel].DLAST_SGA = tcd->DLAST_SGA;
-    /* Clear DONE bit first, otherwise ESG cannot be set */
+
     base->TCD[channel].CSR = 0;
     base->TCD[channel].CSR = tcd->CSR;
     base->TCD[channel].BITER_ELINKNO = tcd->BITER;
@@ -193,7 +191,4 @@ void dac_out_unpause(){
 	return;
 }
 
-void dac_out_reboot(){
-	//HAY QUE ACTUALIZAR ESTOO
-	return;
-}
+
